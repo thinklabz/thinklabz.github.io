@@ -4,7 +4,6 @@ import { Search, Menu, X, ChevronDown, Sun, Moon, Monitor } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useNavigate } from 'react-router-dom'
 import AdminLoginModal from './AdminLoginModal'
-import { triggerHaptic } from '../utils/haptic'
 
 interface NavbarProps {
   onSearchClick: () => void
@@ -20,18 +19,26 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
   const navigate = useNavigate()
   const themePressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasMovedRef = useRef(false)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   const getThemeIcon = () => {
     if (theme === 'system') return <Monitor className="w-5 h-5 text-foreground" />
     return effectiveTheme === 'light' ? <Sun className="w-5 h-5 text-foreground" /> : <Moon className="w-5 h-5 text-foreground" />
   }
 
-  const handleThemePressStart = () => {
+  const handleThemePressStart = (e: React.MouseEvent | React.TouchEvent) => {
     hasMovedRef.current = false
+    // Store touch start position to detect movement
+    if ('touches' in e) {
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
     themePressTimerRef.current = setTimeout(() => {
       if (!hasMovedRef.current) {
         setIsAdminLoginOpen(true)
-        triggerHaptic(20)
+        // Medium vibration for admin activation
+        if ('vibrate' in navigator) {
+          navigator.vibrate([40, 30, 40])
+        }
       }
     }, 5000)
   }
@@ -41,15 +48,37 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
       clearTimeout(themePressTimerRef.current)
       themePressTimerRef.current = null
     }
+    touchStartRef.current = null
   }
 
   const handleThemeClick = () => {
     if (!hasMovedRef.current) {
       toggleTheme()
+      // Light vibration for theme change
+      if ('vibrate' in navigator) {
+        navigator.vibrate(20)
+      }
     }
   }
 
-  const handleThemeMove = () => {
+  const handleThemeMove = (e: React.MouseEvent | React.TouchEvent) => {
+    // Check if touch moved significantly
+    if ('touches' in e && touchStartRef.current) {
+      const touch = e.touches[0]
+      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x)
+      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y)
+      // Allow small movement (10px threshold) to account for natural finger wobble
+      if (deltaX > 10 || deltaY > 10) {
+        hasMovedRef.current = true
+        handleThemePressEnd()
+      }
+    } else if (!('touches' in e)) {
+      hasMovedRef.current = true
+      handleThemePressEnd()
+    }
+  }
+
+  const handleTouchCancel = () => {
     hasMovedRef.current = true
     handleThemePressEnd()
   }
@@ -125,11 +154,14 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
               onMouseMove={handleThemeMove}
               onTouchStart={handleThemePressStart}
               onTouchEnd={handleThemePressEnd}
+              onTouchCancel={handleTouchCancel}
+              onTouchMove={handleThemeMove}
               onClick={handleThemeClick}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               className="p-2 rounded-lg hover:bg-secondary transition-colors"
               aria-label="Toggle theme"
+              style={{ touchAction: 'none' }}
             >
               <AnimatePresence mode="wait">
                 <motion.div
@@ -177,11 +209,14 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
               onMouseMove={handleThemeMove}
               onTouchStart={handleThemePressStart}
               onTouchEnd={handleThemePressEnd}
+              onTouchCancel={handleTouchCancel}
+              onTouchMove={handleThemeMove}
               onClick={handleThemeClick}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               className="p-2 rounded-lg hover:bg-secondary transition-colors"
               aria-label="Toggle theme"
+              style={{ touchAction: 'none' }}
             >
               <AnimatePresence mode="wait">
                 <motion.div
@@ -196,12 +231,12 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
               </AnimatePresence>
             </motion.button>
 
-            {/* Hamburger Menu */}
+            {/* Hamburger Menu - Hidden on mobile, shown on desktop */}
             <motion.button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="hidden md:block p-2 rounded-lg hover:bg-secondary transition-colors"
               aria-label="Menu"
             >
               <AnimatePresence mode="wait">

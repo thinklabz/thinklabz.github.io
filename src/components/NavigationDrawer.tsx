@@ -17,6 +17,11 @@ const sections: Section[] = [
     content: 'ThinkLabz is a digital poetry sanctuary.',
   },
   {
+    id: 'about',
+    title: 'About',
+    content: 'ThinkLabz is a premium poetry platform dedicated to sharing beautiful verses and creative expressions.',
+  },
+  {
     id: 'contact',
     title: 'Contact',
     content: 'Get in touch with us.',
@@ -29,7 +34,7 @@ const sections: Section[] = [
     title: 'Social',
     content: 'Follow us on social media.',
     links: [
-      { label: 'Instagram', url: 'https://instagram.com' },
+      { label: 'Instagram', url: 'https://instagram.com/_ft.avx' },
       { label: 'GitHub', url: 'https://github.com' },
     ],
   },
