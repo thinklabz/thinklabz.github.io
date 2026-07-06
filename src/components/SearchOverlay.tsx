@@ -212,7 +212,7 @@ const months = Array.from(
                 <p className="text-muted-foreground">No poems found</p>
               </div>
             ) : (
-              <div className="divide-y divide-border/20">
+              <div className="p-4 sm:p-6 space-y-3">
                 {filteredPoems.map((poem, index) => (
                   <motion.button
                     key={poem.id}
@@ -223,25 +223,48 @@ const months = Array.from(
                       onPoemClick(poem)
                       onClose()
                     }}
-                    className="w-full p-4 sm:p-6 text-left hover:bg-secondary/50 transition-colors group no-select"
+                    className="w-full text-left group no-select"
                     onContextMenu={handleContextMenu}
                     onCopy={handleCopyCut}
                     onCut={handleCopyCut}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors text-sm sm:text-base select-none">
+                    <div className="flex flex-col sm:flex-row gap-4 p-4 bg-secondary/30 rounded-xl hover:bg-secondary/50 transition-all duration-200 hover:shadow-lg">
+                      {/* Thumbnail */}
+                      {poem.image ? (
+                        <div className="w-full sm:w-24 h-32 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+                          <img
+                            src={poem.image}
+                            alt={poem.title}
+                            loading="lazy"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full sm:w-24 h-32 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-secondary to-muted" />
+                      )}
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors text-sm sm:text-base select-none line-clamp-1">
                           {poem.title}
                         </h3>
-                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-2 select-none">
+                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-3 select-none">
                           {poem.text}
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground select-none">
-                          <span className="px-2 py-1 rounded-full bg-secondary">
-                            {poem.category}
-                          </span>
-                          <span>•</span>
-                          <span>{poem.month}</span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground select-none flex-wrap">
+                          {poem.category && (
+                            <span className="px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                              {poem.category}
+                            </span>
+                          )}
+                          {poem.month && (
+                            <>
+                              {poem.category && <span>•</span>}
+                              <span className="px-2 py-1 rounded-full bg-secondary">
+                                {poem.month}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

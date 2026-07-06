@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Instagram, Copy, Share2, X } from 'lucide-react'
 import { PoemWithId } from '../services/poems'
 import { triggerHaptic } from '../utils/haptic'
+import Toast from './admin/Toast'
 
 interface PoemReaderProps {
   poems: PoemWithId[]
@@ -14,6 +15,7 @@ interface PoemReaderProps {
 
 export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrevious }: PoemReaderProps) {
   const [isClosing, setIsClosing] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const currentIndex = currentPoem ? poems.findIndex(p => p.id === currentPoem.id) : null
 
   const handleClose = () => {
@@ -22,6 +24,51 @@ export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrev
       onClose()
       setIsClosing(false)
     }, 300)
+  }
+
+  const handleShare = async () => {
+    triggerHaptic(15)
+    
+    if (!currentPoem) return
+
+    const websiteUrl = 'https://thinklabz.vercel.app'
+    let shareContent: string
+
+    if (currentPoem.instagram) {
+      // Share with Instagram post URL
+      shareContent = `✨ ${currentPoem.title || 'Poem'}
+
+Read this poem on Instagram:
+${currentPoem.instagram}
+
+Discover more poems:
+${websiteUrl}`
+    } else {
+      // Fallback: share title and website link
+      shareContent = `✨ ${currentPoem.title || 'Poem'}
+
+Discover more poems:
+${websiteUrl}`
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: currentPoem.title || 'Poem',
+          text: shareContent,
+        })
+      } catch (error) {
+        // User cancelled or share failed, fall back to clipboard
+        await navigator.clipboard.writeText(shareContent)
+        setToast({ message: 'Share content copied.', type: 'success' })
+        setTimeout(() => setToast(null), 3000)
+      }
+    } else {
+      // Browser doesn't support Web Share API, copy to clipboard
+      await navigator.clipboard.writeText(shareContent)
+      setToast({ message: 'Share content copied.', type: 'success' })
+      setTimeout(() => setToast(null), 3000)
+    }
   }
 
   // Prevent context menu on poem content
@@ -55,9 +102,10 @@ export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrev
   if (!currentPoem) return null
 
   return (
-    <AnimatePresence>
-      {!isClosing && (
-        <motion.div
+    <>
+      <AnimatePresence>
+        {!isClosing && (
+          <motion.div
   initial={{ opacity: 0 }}
   animate={{ opacity: 1 }}
   exit={{ opacity: 0 }}
@@ -169,15 +217,7 @@ export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrev
             </motion.button>
 
             <motion.button
-              onClick={() => {
-                triggerHaptic(15)
-                if (navigator.share) {
-                  navigator.share({
-                    title: currentPoem.title,
-                    text: currentPoem.text,
-                  })
-                }
-              }}
+              onClick={handleShare}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               className="p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors"
@@ -187,7 +227,15 @@ export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrev
             </motion.button>
           </motion.div>
         </motion.div>
+        )}
+      </AnimatePresence>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
-    </AnimatePresence>
+    </>
   )
 }
