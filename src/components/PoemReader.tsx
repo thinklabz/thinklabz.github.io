@@ -186,17 +186,6 @@ export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrev
               <Share2 className="w-5 h-5 text-white" />
             </motion.button>
           </motion.div>
-
-          {/* Swipe hint for mobile */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 text-white/50 text-xs md:hidden"
-          >
-            Swipe to navigate • Swipe down to close
-          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
