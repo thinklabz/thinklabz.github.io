@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Menu, X, ChevronDown, Sun, Moon, Monitor } from 'lucide-react'
+import { Search, Menu, X, ChevronDown, Sun, Moon, Monitor, Maximize2, Minimize2 } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
-import { useNavigate } from 'react-router-dom'
-import AdminLoginModal from './AdminLoginModal'
+import { toggleFullscreen, isFullscreen as checkIsFullscreen } from '../utils/fullscreen'
 
 interface NavbarProps {
   onSearchClick: () => void
@@ -15,11 +14,36 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
   const { theme, effectiveTheme, toggleTheme } = useTheme()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openSection, setOpenSection] = useState<string | null>(null)
-  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false)
-  const navigate = useNavigate()
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const themePressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasMovedRef = useRef(false)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const [isTouchDevice, setIsTouchDevice] = useState(false)
+
+  // Detect touch device on mount
+  useEffect(() => {
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+    setIsTouchDevice(isTouch)
+  }, [])
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(checkIsFullscreen())
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange)
+    }
+  }, [])
 
   const getThemeIcon = () => {
     if (theme === 'system') return <Monitor className="w-5 h-5 text-foreground" />
@@ -27,6 +51,9 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
   }
 
   const handleThemePressStart = (e: React.MouseEvent | React.TouchEvent) => {
+    // Only enable long-press on non-touch devices
+    if (isTouchDevice) return
+    
     hasMovedRef.current = false
     // Store touch start position to detect movement
     if ('touches' in e) {
@@ -34,11 +61,8 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
     }
     themePressTimerRef.current = setTimeout(() => {
       if (!hasMovedRef.current) {
-        setIsAdminLoginOpen(true)
-        // Medium vibration for admin activation
-        if ('vibrate' in navigator) {
-          navigator.vibrate([40, 30, 40])
-        }
+        // Admin login is now handled via secret code in search
+        // This timer is kept for future use but currently does nothing
       }
     }, 5000)
   }
@@ -62,6 +86,9 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
   }
 
   const handleThemeMove = (e: React.MouseEvent | React.TouchEvent) => {
+    // Only enable movement detection on non-touch devices
+    if (isTouchDevice) return
+    
     // Check if touch moved significantly
     if ('touches' in e && touchStartRef.current) {
       const touch = e.touches[0]
@@ -83,9 +110,8 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
     handleThemePressEnd()
   }
 
-  const handleAdminLoginSuccess = () => {
-    setIsAdminLoginOpen(false)
-    navigate('/admin')
+  const handleFullscreenToggle = async () => {
+    await toggleFullscreen()
   }
 
   useEffect(() => {
@@ -175,6 +201,39 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
                 </motion.div>
               </AnimatePresence>
             </motion.button>
+
+            {/* Fullscreen Toggle */}
+            <motion.button
+              onClick={handleFullscreenToggle}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              <AnimatePresence mode="wait">
+                {isFullscreen ? (
+                  <motion.div
+                    key="exit"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Minimize2 className="w-5 h-5 text-foreground" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="enter"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Maximize2 className="w-5 h-5 text-foreground" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -228,6 +287,39 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
                 >
                   {getThemeIcon()}
                 </motion.div>
+              </AnimatePresence>
+            </motion.button>
+
+            {/* Fullscreen Toggle */}
+            <motion.button
+              onClick={handleFullscreenToggle}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              <AnimatePresence mode="wait">
+                {isFullscreen ? (
+                  <motion.div
+                    key="exit"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Minimize2 className="w-5 h-5 text-foreground" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="enter"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Maximize2 className="w-5 h-5 text-foreground" />
+                  </motion.div>
+                )}
               </AnimatePresence>
             </motion.button>
 
@@ -320,12 +412,6 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <AdminLoginModal
-        isOpen={isAdminLoginOpen}
-        onClose={() => setIsAdminLoginOpen(false)}
-        onLoginSuccess={handleAdminLoginSuccess}
-      />
     </motion.nav>
   )
 }

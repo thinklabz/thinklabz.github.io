@@ -1,10 +1,11 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import HowToUse from './components/HowToUse'
 import PoetryGrid from './components/PoetryGrid'
 import ErrorBoundary from './components/ErrorBoundary'
+import AdminLoginModal from './components/AdminLoginModal'
 import { subscribeToPoems, PoemWithId } from './services/poems'
 
 const PoemReader = lazy(() => import('./components/PoemReader'))
@@ -19,7 +20,9 @@ function Home() {
   const [currentPoem, setCurrentPoem] = useState<PoemWithId | null>(null)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false)
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const unsubscribe = subscribeToPoems(
@@ -60,6 +63,15 @@ function Home() {
     setCurrentPoem(poem)
   }
 
+  const handleAdminTrigger = () => {
+    setIsAdminLoginOpen(true)
+  }
+
+  const handleAdminLoginSuccess = () => {
+    setIsAdminLoginOpen(false)
+    navigate('/admin')
+  }
+
   return (
     <>
       <Navbar onSearchClick={() => setIsSearchOpen(true)} onMenuClick={() => setIsNavDrawerOpen(true)} />
@@ -86,6 +98,7 @@ function Home() {
           poems={poems}
           isLoading={isLoading}
           onPoemClick={handlePoemClick}
+          onAdminTrigger={handleAdminTrigger}
         />
       </Suspense>
       <Suspense fallback={null}>
@@ -99,6 +112,11 @@ function Home() {
           {error}
         </div>
       )}
+      <AdminLoginModal
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        onLoginSuccess={handleAdminLoginSuccess}
+      />
     </>
   )
 }

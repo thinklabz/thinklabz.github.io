@@ -1,9 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import { Instagram, Copy, Share2, X, Maximize2, Minimize2 } from 'lucide-react'
+import { Instagram, Copy, Share2, X } from 'lucide-react'
 import { PoemWithId } from '../services/poems'
 import { triggerHaptic } from '../utils/haptic'
-import { toggleFullscreen, isFullscreenSupported } from '../utils/fullscreen'
 
 interface PoemReaderProps {
   poems: PoemWithId[]
@@ -15,14 +14,7 @@ interface PoemReaderProps {
 
 export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrevious }: PoemReaderProps) {
   const [isClosing, setIsClosing] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const currentIndex = currentPoem ? poems.findIndex(p => p.id === currentPoem.id) : null
-
-  const handleFullscreenToggle = async () => {
-    triggerHaptic(15)
-    await toggleFullscreen()
-    setIsFullscreen(!isFullscreen)
-  }
 
   const handleClose = () => {
     setIsClosing(true)
@@ -193,22 +185,6 @@ export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrev
             >
               <Share2 className="w-5 h-5 text-white" />
             </motion.button>
-
-            {isFullscreenSupported() && (
-              <motion.button
-                onClick={handleFullscreenToggle}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className="p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors"
-                aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="w-5 h-5 text-white" />
-                ) : (
-                  <Maximize2 className="w-5 h-5 text-white" />
-                )}
-              </motion.button>
-            )}
           </motion.div>
 
           {/* Swipe hint for mobile */}

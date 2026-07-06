@@ -9,12 +9,16 @@ interface SearchOverlayProps {
   poems: PoemWithId[]
   isLoading?: boolean
   onPoemClick: (poem: PoemWithId) => void
+  onAdminTrigger?: () => void
 }
 
-export default function SearchOverlay({ isOpen, onClose, poems, isLoading = false, onPoemClick }: SearchOverlayProps) {
+export default function SearchOverlay({ isOpen, onClose, poems, isLoading = false, onPoemClick, onAdminTrigger }: SearchOverlayProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
+
+  // Detect touch device
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
   // Prevent context menu and copy/cut
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -58,6 +62,13 @@ const months = Array.from(
       if (e.key === 'Escape') {
         onClose()
       }
+      // Check for secret code "avwl" on Enter key (only on touch devices)
+      if (e.key === 'Enter' && isTouchDevice && searchQuery.toLowerCase() === 'avwl' && onAdminTrigger) {
+        e.preventDefault()
+        setSearchQuery('')
+        onClose()
+        onAdminTrigger()
+      }
     }
 
     if (isOpen) {
@@ -65,7 +76,7 @@ const months = Array.from(
     }
 
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, searchQuery, isTouchDevice, onAdminTrigger])
 
   useEffect(() => {
     if (!isOpen) {
