@@ -1,4 +1,4 @@
-import { motion, AnimatePresence, useMotionValue, PanInfo } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion'
 import { useEffect, useState, useRef } from 'react'
 import { Instagram, Copy, Share2, X } from 'lucide-react'
 import { PoemWithId } from '../services/poems'
@@ -19,8 +19,19 @@ export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrev
   const [showIndicator, setShowIndicator] = useState(true)
   const currentIndex = currentPoem ? poems.findIndex(p => p.id === currentPoem.id) : null
   const indicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  
   const x = useMotionValue(0)
-  const SWIPE_THRESHOLD = 80
+  const scale = useTransform(x, [-300, 0, 300], [0.96, 1, 0.96])
+  const opacity = useTransform(x, [-300, 0, 300], [0.85, 1, 0.85])
+  
+  // Neighbor preview transforms
+  const prevX = useTransform(x, [0, 300], [-100, 0])
+  const prevOpacity = useTransform(x, [0, 300], [0, 0.6])
+  const nextX = useTransform(x, [0, -300], [100, 0])
+  const nextOpacity = useTransform(x, [0, -300], [0, 0.6])
+  
+  const SWIPE_THRESHOLD = typeof window !== 'undefined' ? window.innerWidth * 0.25 : 100
+  const VELOCITY_THRESHOLD = 500
 
   const handleClose = () => {
     setIsClosing(true)
@@ -90,11 +101,11 @@ ${websiteUrl}`
     const offset = info.offset.x
     const velocity = info.velocity.x
 
-    if (offset > SWIPE_THRESHOLD || velocity > 500) {
+    if (offset > SWIPE_THRESHOLD || velocity > VELOCITY_THRESHOLD) {
       // Swiped right - go to previous
       triggerHaptic(10)
       onPrevious()
-    } else if (offset < -SWIPE_THRESHOLD || velocity < -500) {
+    } else if (offset < -SWIPE_THRESHOLD || velocity < -VELOCITY_THRESHOLD) {
       // Swiped left - go to next
       triggerHaptic(10)
       onNext()
@@ -181,28 +192,90 @@ ${websiteUrl}`
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl"
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.2}
+            dragElastic={0.15}
+            dragTransition={{
+              bounceStiffness: 300,
+              bounceDamping: 30,
+ }}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             style={{ x, touchAction: 'pan-y' }}
           >
         
           {/* Background with image */}
-          {currentPoem.image ? (
-            <img
-              src={currentPoem.image}
-              alt="Background"
-              loading="eager"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          ) : (
+          <motion.div
+            className="absolute inset-0 w-full h-full"
+            style={{ 
+              scale,
+              opacity,
+              willChange: 'transform'
+            }}
+          >
+            {currentPoem.image ? (
+              <img
+                src={currentPoem.image}
+                alt="Background"
+                loading="eager"
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ transform: 'translate3d(0, 0, 0)' }}
+              />
+            ) : (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute inset-0 bg-gradient-to-br from-secondary to-muted"
+              />
+            )}
+          </motion.div>
+
+          {/* Previous image preview */}
+          {currentIndex !== null && poems.length > 0 && (
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-0 bg-gradient-to-br from-secondary to-muted"
-            />
+              className="absolute inset-0 w-full h-full"
+              style={{
+                x: prevX,
+                opacity: prevOpacity,
+                willChange: 'transform'
+              }}
+            >
+              {poems[currentIndex > 0 ? currentIndex - 1 : poems.length - 1].image ? (
+                <img
+                  src={poems[currentIndex > 0 ? currentIndex - 1 : poems.length - 1].image}
+                  alt="Previous"
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ transform: 'translate3d(0, 0, 0)' }}
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-secondary to-muted" />
+              )}
+            </motion.div>
+          )}
+
+          {/* Next image preview */}
+          {currentIndex !== null && poems.length > 0 && (
+            <motion.div
+              className="absolute inset-0 w-full h-full"
+              style={{
+                x: nextX,
+                opacity: nextOpacity,
+                willChange: 'transform'
+              }}
+            >
+              {poems[currentIndex < poems.length - 1 ? currentIndex + 1 : 0].image ? (
+                <img
+                  src={poems[currentIndex < poems.length - 1 ? currentIndex + 1 : 0].image}
+                  alt="Next"
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ transform: 'translate3d(0, 0, 0)' }}
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-secondary to-muted" />
+              )}
+            </motion.div>
           )}
 
           {/* Dark overlay */}
