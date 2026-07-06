@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Search } from 'lucide-react'
 import { PoemWithId } from '../services/poems'
@@ -37,46 +37,48 @@ const months = Array.from(
   new Set(poems.map((p) => p.month).filter(Boolean))
 )
 
-  const filteredPoems = poems.filter((poem) => {
-  const title = poem.title ?? ""
-  const text = poem.text ?? ""
-  const category = poem.category ?? ""
-  const month = poem.month ?? ""
+  const filteredPoems = useMemo(() => {
+    return poems.filter((poem) => {
+      const title = poem.title ?? ""
+      const text = poem.text ?? ""
+      const category = poem.category ?? ""
+      const month = poem.month ?? ""
 
-  const query = searchQuery.toLowerCase()
+      const query = searchQuery.toLowerCase()
 
-  const matchesSearch =
-    title.toLowerCase().includes(query) ||
-    text.toLowerCase().includes(query) ||
-    category.toLowerCase().includes(query) ||
-    month.toLowerCase().includes(query)
+      const matchesSearch =
+        title.toLowerCase().includes(query) ||
+        text.toLowerCase().includes(query) ||
+        category.toLowerCase().includes(query) ||
+        month.toLowerCase().includes(query)
 
-  const matchesCategory = selectedCategory ? category === selectedCategory : true
-  const matchesMonth = selectedMonth ? month === selectedMonth : true
+      const matchesCategory = selectedCategory ? category === selectedCategory : true
+      const matchesMonth = selectedMonth ? month === selectedMonth : true
 
-  return matchesSearch && matchesCategory && matchesMonth
-})
+      return matchesSearch && matchesCategory && matchesMonth
+    })
+  }, [poems, searchQuery, selectedCategory, selectedMonth])
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onClose()
+    }
+    // Check for secret code "avwl" on Enter key (only on touch devices)
+    if (e.key === 'Enter' && isTouchDevice && searchQuery.toLowerCase() === 'avwl' && onAdminTrigger) {
+      e.preventDefault()
+      setSearchQuery('')
+      onClose()
+      onAdminTrigger()
+    }
+  }, [onClose, isTouchDevice, searchQuery, onAdminTrigger])
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-      // Check for secret code "avwl" on Enter key (only on touch devices)
-      if (e.key === 'Enter' && isTouchDevice && searchQuery.toLowerCase() === 'avwl' && onAdminTrigger) {
-        e.preventDefault()
-        setSearchQuery('')
-        onClose()
-        onAdminTrigger()
-      }
-    }
-
     if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown)
+      window.addEventListener('keydown', handleKeyDown, { passive: true })
     }
 
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose, searchQuery, isTouchDevice, onAdminTrigger])
+  }, [isOpen, handleKeyDown])
 
   useEffect(() => {
     if (!isOpen) {

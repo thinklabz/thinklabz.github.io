@@ -1,5 +1,5 @@
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback, memo } from 'react'
 import { Instagram, Copy, Share2, X } from 'lucide-react'
 import { PoemWithId } from '../services/poems'
 import { triggerHaptic } from '../utils/haptic'
@@ -14,7 +14,7 @@ interface PoemReaderProps {
   onPrevious: () => void
 }
 
-export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrevious }: PoemReaderProps) {
+const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNext, onPrevious }: PoemReaderProps) {
   const [isClosing, setIsClosing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [showIndicator, setShowIndicator] = useState(true)
@@ -41,15 +41,15 @@ export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrev
   const TAP_MOVEMENT_THRESHOLD = 10
   const TAP_DURATION_THRESHOLD = 300
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsClosing(true)
     setTimeout(() => {
       onClose()
       setIsClosing(false)
     }, 300)
-  }
+  }, [onClose])
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     triggerHaptic(15)
     
     if (!currentPoem) return
@@ -92,20 +92,20 @@ ${websiteUrl}`
       setToast({ message: 'Share content copied.', type: 'success' })
       setTimeout(() => setToast(null), 3000)
     }
-  }
+  }, [currentPoem])
 
   // Prevent context menu on poem content
-  const handleContextMenu = (e: React.MouseEvent) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
-  }
+  }, [])
 
   // Prevent copy/cut
-  const handleCopyCut = (e: React.ClipboardEvent) => {
+  const handleCopyCut = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault()
-  }
+  }, [])
 
   // Handle swipe gestures
-  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const handleDragEnd = useCallback((_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const offset = info.offset.x
     const velocity = info.velocity.x
 
@@ -118,17 +118,17 @@ ${websiteUrl}`
       triggerHaptic(10)
       onNext()
     }
-  }
+  }, [SWIPE_THRESHOLD, VELOCITY_THRESHOLD, onPrevious, onNext])
 
   // Prevent browser navigation during horizontal swipe
-  const handleDragStart = () => {
+  const handleDragStart = useCallback(() => {
     resetIndicatorTimeout()
     // Mark as moved to prevent tap detection
     hasMovedRef.current = true
-  }
+  }, [])
 
   // Handle touch start for tap detection
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (!isTouchDevice) return
     const touch = e.touches[0]
     tapStartRef.current = {
@@ -137,10 +137,10 @@ ${websiteUrl}`
       time: Date.now()
     }
     hasMovedRef.current = false
-  }
+  }, [isTouchDevice])
 
   // Handle touch move to detect movement
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isTouchDevice || !tapStartRef.current) return
     const touch = e.touches[0]
     const deltaX = Math.abs(touch.clientX - tapStartRef.current.x)
@@ -149,10 +149,10 @@ ${websiteUrl}`
     if (deltaX > TAP_MOVEMENT_THRESHOLD || deltaY > TAP_MOVEMENT_THRESHOLD) {
       hasMovedRef.current = true
     }
-  }
+  }, [isTouchDevice, TAP_MOVEMENT_THRESHOLD])
 
   // Handle touch end to detect single tap
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     if (!isTouchDevice || !tapStartRef.current) return
     
     const touch = e.changedTouches[0]
@@ -179,10 +179,10 @@ ${websiteUrl}`
     }
     
     tapStartRef.current = null
-  }
+  }, [isTouchDevice, TAP_MOVEMENT_THRESHOLD, TAP_DURATION_THRESHOLD])
 
   // Reset indicator timeout on any interaction
-  const resetIndicatorTimeout = () => {
+  const resetIndicatorTimeout = useCallback(() => {
     setShowIndicator(true)
     if (indicatorTimeoutRef.current) {
       clearTimeout(indicatorTimeoutRef.current)
@@ -190,9 +190,9 @@ ${websiteUrl}`
     indicatorTimeoutRef.current = setTimeout(() => {
       setShowIndicator(false)
     }, 2000)
-  }
+  }, [])
 
-  // Preload adjacent images
+  // Preload adjacent images with decoding
   useEffect(() => {
     if (currentIndex === null || poems.length === 0) return
 
@@ -200,6 +200,7 @@ ${websiteUrl}`
       if (url) {
         const img = new Image()
         img.src = url
+        img.decode().catch(() => {}) // Decode before display
       }
     }
 
@@ -212,7 +213,7 @@ ${websiteUrl}`
     preloadImage(poems[nextIndex]?.image || null)
   }, [currentIndex, poems])
 
-  // Keyboard navigation
+  // Keyboard navigation with passive listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (currentIndex === null) return
@@ -228,9 +229,9 @@ ${websiteUrl}`
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, { passive: true })
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentIndex, onNext, onPrevious])
+  }, [currentIndex, onNext, onPrevious, handleClose, resetIndicatorTimeout])
 
   // Initial indicator fade
   useEffect(() => {
@@ -266,7 +267,11 @@ ${websiteUrl}`
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            style={{ x, touchAction: 'pan-y' }}
+            style={{ 
+              x, 
+              touchAction: 'pan-y',
+              backdropFilter: isTouchDevice ? 'blur(8px)' : 'blur(24px)'
+            }}
           >
         
           {/* Background with image */}
@@ -467,4 +472,6 @@ ${websiteUrl}`
       )}
     </>
   )
-}
+})
+
+export default PoemReader

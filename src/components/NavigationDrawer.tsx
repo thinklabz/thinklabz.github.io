@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronDown } from 'lucide-react'
 import { triggerHaptic } from '../utils/haptic'
@@ -68,13 +68,13 @@ interface NavigationDrawerProps {
   onClose: () => void
 }
 
-export default function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
+const NavigationDrawer = memo(function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
   const [openSection, setOpenSection] = useState<string | null>(null)
 
-  const toggleSection = (sectionId: string) => {
+  const toggleSection = useCallback((sectionId: string) => {
     triggerHaptic(10)
     setOpenSection((prev) => (prev === sectionId ? null : sectionId))
-  }
+  }, [])
 
   return (
     <AnimatePresence>
@@ -184,4 +184,6 @@ export default function NavigationDrawer({ isOpen, onClose }: NavigationDrawerPr
       )}
     </AnimatePresence>
   )
-}
+})
+
+export default NavigationDrawer

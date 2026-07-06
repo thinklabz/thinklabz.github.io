@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Menu, X, ChevronDown, Sun, Moon, Monitor, Maximize2, Minimize2 } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
@@ -9,7 +9,7 @@ interface NavbarProps {
   onMenuClick: () => void
 }
 
-export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
+const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const { theme, effectiveTheme, toggleTheme } = useTheme()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -45,12 +45,12 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
     }
   }, [])
 
-  const getThemeIcon = () => {
+  const getThemeIcon = useCallback(() => {
     if (theme === 'system') return <Monitor className="w-5 h-5 text-foreground" />
     return effectiveTheme === 'light' ? <Sun className="w-5 h-5 text-foreground" /> : <Moon className="w-5 h-5 text-foreground" />
-  }
+  }, [theme, effectiveTheme])
 
-  const handleThemePressStart = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleThemePressStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     // Only enable long-press on non-touch devices
     if (isTouchDevice) return
     
@@ -65,17 +65,17 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
         // This timer is kept for future use but currently does nothing
       }
     }, 5000)
-  }
+  }, [isTouchDevice])
 
-  const handleThemePressEnd = () => {
+  const handleThemePressEnd = useCallback(() => {
     if (themePressTimerRef.current) {
       clearTimeout(themePressTimerRef.current)
       themePressTimerRef.current = null
     }
     touchStartRef.current = null
-  }
+  }, [])
 
-  const handleThemeClick = () => {
+  const handleThemeClick = useCallback(() => {
     if (!hasMovedRef.current) {
       toggleTheme()
       // Light vibration for theme change
@@ -83,9 +83,9 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
         navigator.vibrate(20)
       }
     }
-  }
+  }, [toggleTheme])
 
-  const handleThemeMove = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleThemeMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     // Only enable movement detection on non-touch devices
     if (isTouchDevice) return
     
@@ -103,29 +103,29 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
       hasMovedRef.current = true
       handleThemePressEnd()
     }
-  }
+  }, [isTouchDevice, handleThemePressEnd])
 
-  const handleTouchCancel = () => {
+  const handleTouchCancel = useCallback(() => {
     hasMovedRef.current = true
     handleThemePressEnd()
-  }
+  }, [handleThemePressEnd])
 
-  const handleFullscreenToggle = async () => {
+  const handleFullscreenToggle = useCallback(async () => {
     await toggleFullscreen()
-  }
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10)
     }
 
-    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const scrollToTop = () => {
+  const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  }, [])
 
   return (
     <motion.nav
@@ -414,4 +414,6 @@ export default function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
       </AnimatePresence>
     </motion.nav>
   )
-}
+})
+
+export default Navbar
