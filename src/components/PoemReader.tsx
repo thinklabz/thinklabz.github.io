@@ -4,6 +4,7 @@ import { Instagram, Copy, Share2, X } from 'lucide-react'
 import { PoemWithId } from '../services/poems'
 import { triggerHaptic } from '../utils/haptic'
 import Toast from './admin/Toast'
+import { toggleFullscreen } from '../utils/fullscreen'
 
 interface PoemReaderProps {
   poems: PoemWithId[]
@@ -20,6 +21,11 @@ export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrev
   const currentIndex = currentPoem ? poems.findIndex(p => p.id === currentPoem.id) : null
   const indicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
+  // Touch detection for single-tap fullscreen
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+  const tapStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
+  const hasMovedRef = useRef(false)
+  
   const x = useMotionValue(0)
   const scale = useTransform(x, [-300, 0, 300], [0.96, 1, 0.96])
   const opacity = useTransform(x, [-300, 0, 300], [0.85, 1, 0.85])
@@ -32,6 +38,8 @@ export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrev
   
   const SWIPE_THRESHOLD = typeof window !== 'undefined' ? window.innerWidth * 0.25 : 100
   const VELOCITY_THRESHOLD = 500
+  const TAP_MOVEMENT_THRESHOLD = 10
+  const TAP_DURATION_THRESHOLD = 300
 
   const handleClose = () => {
     setIsClosing(true)
@@ -115,6 +123,62 @@ ${websiteUrl}`
   // Prevent browser navigation during horizontal swipe
   const handleDragStart = () => {
     resetIndicatorTimeout()
+    // Mark as moved to prevent tap detection
+    hasMovedRef.current = true
+  }
+
+  // Handle touch start for tap detection
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isTouchDevice) return
+    const touch = e.touches[0]
+    tapStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now()
+    }
+    hasMovedRef.current = false
+  }
+
+  // Handle touch move to detect movement
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isTouchDevice || !tapStartRef.current) return
+    const touch = e.touches[0]
+    const deltaX = Math.abs(touch.clientX - tapStartRef.current.x)
+    const deltaY = Math.abs(touch.clientY - tapStartRef.current.y)
+    
+    if (deltaX > TAP_MOVEMENT_THRESHOLD || deltaY > TAP_MOVEMENT_THRESHOLD) {
+      hasMovedRef.current = true
+    }
+  }
+
+  // Handle touch end to detect single tap
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isTouchDevice || !tapStartRef.current) return
+    
+    const touch = e.changedTouches[0]
+    const deltaX = Math.abs(touch.clientX - tapStartRef.current.x)
+    const deltaY = Math.abs(touch.clientY - tapStartRef.current.y)
+    const deltaTime = Date.now() - tapStartRef.current.time
+    
+    // Check if it's a true single tap (minimal movement, short duration, no drag)
+    if (
+      !hasMovedRef.current &&
+      deltaX < TAP_MOVEMENT_THRESHOLD &&
+      deltaY < TAP_MOVEMENT_THRESHOLD &&
+      deltaTime < TAP_DURATION_THRESHOLD
+    ) {
+      // Check if tap is on an action button (ignore those)
+      const target = e.target as HTMLElement
+      const isActionButton = target.closest('button') || target.closest('[role="button"]')
+      
+      if (!isActionButton) {
+        // Toggle fullscreen
+        toggleFullscreen()
+        triggerHaptic(10)
+      }
+    }
+    
+    tapStartRef.current = null
   }
 
   // Reset indicator timeout on any interaction
@@ -199,6 +263,9 @@ ${websiteUrl}`
  }}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
             style={{ x, touchAction: 'pan-y' }}
           >
         
