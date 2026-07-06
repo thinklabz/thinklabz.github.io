@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { motion, AnimatePresence, useMotionValue, PanInfo } from 'framer-motion'
+import { useEffect, useState, useRef } from 'react'
 import { Instagram, Copy, Share2, X } from 'lucide-react'
 import { PoemWithId } from '../services/poems'
 import { triggerHaptic } from '../utils/haptic'
@@ -16,7 +16,11 @@ interface PoemReaderProps {
 export default function PoemReader({ poems, currentPoem, onClose, onNext, onPrevious }: PoemReaderProps) {
   const [isClosing, setIsClosing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [showIndicator, setShowIndicator] = useState(true)
   const currentIndex = currentPoem ? poems.findIndex(p => p.id === currentPoem.id) : null
+  const indicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const x = useMotionValue(0)
+  const SWIPE_THRESHOLD = 80
 
   const handleClose = () => {
     setIsClosing(true)
@@ -81,10 +85,64 @@ ${websiteUrl}`
     e.preventDefault()
   }
 
+  // Handle swipe gestures
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const offset = info.offset.x
+    const velocity = info.velocity.x
+
+    if (offset > SWIPE_THRESHOLD || velocity > 500) {
+      // Swiped right - go to previous
+      triggerHaptic(10)
+      onPrevious()
+    } else if (offset < -SWIPE_THRESHOLD || velocity < -500) {
+      // Swiped left - go to next
+      triggerHaptic(10)
+      onNext()
+    }
+  }
+
+  // Prevent browser navigation during horizontal swipe
+  const handleDragStart = () => {
+    resetIndicatorTimeout()
+  }
+
+  // Reset indicator timeout on any interaction
+  const resetIndicatorTimeout = () => {
+    setShowIndicator(true)
+    if (indicatorTimeoutRef.current) {
+      clearTimeout(indicatorTimeoutRef.current)
+    }
+    indicatorTimeoutRef.current = setTimeout(() => {
+      setShowIndicator(false)
+    }, 2000)
+  }
+
+  // Preload adjacent images
+  useEffect(() => {
+    if (currentIndex === null || poems.length === 0) return
+
+    const preloadImage = (url: string | null) => {
+      if (url) {
+        const img = new Image()
+        img.src = url
+      }
+    }
+
+    // Preload previous
+    const prevIndex = currentIndex > 0 ? currentIndex - 1 : poems.length - 1
+    preloadImage(poems[prevIndex]?.image || null)
+
+    // Preload next
+    const nextIndex = currentIndex < poems.length - 1 ? currentIndex + 1 : 0
+    preloadImage(poems[nextIndex]?.image || null)
+  }, [currentIndex, poems])
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (currentIndex === null) return
+
+      resetIndicatorTimeout()
 
       if (e.key === 'Escape') {
         handleClose()
@@ -99,6 +157,16 @@ ${websiteUrl}`
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [currentIndex, onNext, onPrevious])
 
+  // Initial indicator fade
+  useEffect(() => {
+    resetIndicatorTimeout()
+    return () => {
+      if (indicatorTimeoutRef.current) {
+        clearTimeout(indicatorTimeoutRef.current)
+      }
+    }
+  }, [])
+
   if (!currentPoem) return null
 
   return (
@@ -106,12 +174,18 @@ ${websiteUrl}`
       <AnimatePresence>
         {!isClosing && (
           <motion.div
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  exit={{ opacity: 0 }}
-  transition={{ duration: 0.3 }}
-  className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl"
->
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl"
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.2}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            style={{ x, touchAction: 'pan-y' }}
+          >
         
           {/* Background with image */}
           {currentPoem.image ? (
@@ -141,6 +215,21 @@ ${websiteUrl}`
               backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
             }}
           />
+
+          {/* Page indicator */}
+          <AnimatePresence>
+            {showIndicator && currentIndex !== null && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="absolute top-6 left-1/2 -translate-x-1/2 z-20 px-4 py-2 bg-black/30 backdrop-blur-sm rounded-full text-white text-sm font-medium"
+              >
+                {currentIndex + 1} / {poems.length}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Content */}
           <motion.div
