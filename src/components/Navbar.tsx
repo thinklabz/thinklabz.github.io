@@ -7,9 +7,10 @@ import { toggleFullscreen, isFullscreen as checkIsFullscreen } from '../utils/fu
 interface NavbarProps {
   onSearchClick: () => void
   onMenuClick: () => void
+  onAdminTrigger?: () => void
 }
 
-const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps) {
+const Navbar = memo(function Navbar({ onSearchClick, onMenuClick, onAdminTrigger }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const { theme, effectiveTheme, toggleTheme } = useTheme()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -17,14 +18,13 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const themePressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasMovedRef = useRef(false)
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
-  const [isTouchDevice, setIsTouchDevice] = useState(false)
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
+  const isPointerDownRef = useRef(false)
+  const LONG_PRESS_DURATION = 3000
+  const MOVEMENT_THRESHOLD = 10
 
-  // Detect touch device on mount
-  useEffect(() => {
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-    setIsTouchDevice(isTouch)
-  }, [])
+  // Detect Pointer Events support
+  const hasPointerEvents = typeof window !== 'undefined' && 'onpointerdown' in window
 
   // Listen for fullscreen changes
   useEffect(() => {
@@ -45,70 +45,149 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
     }
   }, [])
 
+  // Clean up long press timer on unmount
+  useEffect(() => {
+    return () => {
+      if (themePressTimerRef.current) {
+        clearTimeout(themePressTimerRef.current)
+      }
+    }
+  }, [])
+
   const getThemeIcon = useCallback(() => {
     if (theme === 'system') return <Monitor className="w-5 h-5 text-foreground" />
     return effectiveTheme === 'light' ? <Sun className="w-5 h-5 text-foreground" /> : <Moon className="w-5 h-5 text-foreground" />
   }, [theme, effectiveTheme])
 
-  const handleThemePressStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    // Only enable long-press on non-touch devices
-    if (isTouchDevice) return
-    
-    hasMovedRef.current = false
-    // Store touch start position to detect movement
-    if ('touches' in e) {
-      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-    }
-    themePressTimerRef.current = setTimeout(() => {
-      if (!hasMovedRef.current) {
-        // Admin login is now handled via secret code in search
-        // This timer is kept for future use but currently does nothing
-      }
-    }, 5000)
-  }, [isTouchDevice])
-
-  const handleThemePressEnd = useCallback(() => {
+  // Cancel long press timer
+  const cancelLongPress = useCallback(() => {
     if (themePressTimerRef.current) {
       clearTimeout(themePressTimerRef.current)
       themePressTimerRef.current = null
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Admin] Hold cancelled')
+      }
     }
-    touchStartRef.current = null
+    hasMovedRef.current = false
+    pointerStartRef.current = null
+    isPointerDownRef.current = false
   }, [])
+
+  // Start long press timer
+  const startLongPress = useCallback((clientX: number, clientY: number) => {
+    cancelLongPress()
+    hasMovedRef.current = false
+    pointerStartRef.current = { x: clientX, y: clientY }
+    isPointerDownRef.current = true
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Admin] Hold started')
+    }
+
+    themePressTimerRef.current = setTimeout(() => {
+      if (!hasMovedRef.current && isPointerDownRef.current && onAdminTrigger) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Admin] Hold completed - opening Admin Mode')
+        }
+        onAdminTrigger()
+        if ('vibrate' in navigator) {
+          navigator.vibrate([40, 30, 40])
+        }
+      }
+      cancelLongPress()
+    }, LONG_PRESS_DURATION)
+  }, [cancelLongPress, onAdminTrigger])
+
+  // Handle pointer down (works for mouse, touch, pen)
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault()
+    startLongPress(e.clientX, e.clientY)
+  }, [startLongPress])
+
+  // Handle pointer move (detect movement)
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isPointerDownRef.current || !pointerStartRef.current) return
+
+    const deltaX = Math.abs(e.clientX - pointerStartRef.current.x)
+    const deltaY = Math.abs(e.clientY - pointerStartRef.current.y)
+
+    if (deltaX > MOVEMENT_THRESHOLD || deltaY > MOVEMENT_THRESHOLD) {
+      hasMovedRef.current = true
+      cancelLongPress()
+    }
+  }, [cancelLongPress])
+
+  // Handle pointer up/cancel/leave
+  const handlePointerUp = useCallback(() => {
+    cancelLongPress()
+  }, [cancelLongPress])
+
+  // Fallback mouse handlers for browsers without Pointer Events
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (hasPointerEvents) return
+    startLongPress(e.clientX, e.clientY)
+  }, [startLongPress, hasPointerEvents])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (hasPointerEvents || !isPointerDownRef.current || !pointerStartRef.current) return
+
+    const deltaX = Math.abs(e.clientX - pointerStartRef.current.x)
+    const deltaY = Math.abs(e.clientY - pointerStartRef.current.y)
+
+    if (deltaX > MOVEMENT_THRESHOLD || deltaY > MOVEMENT_THRESHOLD) {
+      hasMovedRef.current = true
+      cancelLongPress()
+    }
+  }, [cancelLongPress, hasPointerEvents])
+
+  const handleMouseUp = useCallback(() => {
+    if (hasPointerEvents) return
+    cancelLongPress()
+  }, [cancelLongPress, hasPointerEvents])
+
+  const handleMouseLeave = useCallback(() => {
+    if (hasPointerEvents) return
+    cancelLongPress()
+  }, [cancelLongPress, hasPointerEvents])
+
+  // Fallback touch handlers for browsers without Pointer Events
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (hasPointerEvents) return
+    const touch = e.touches[0]
+    startLongPress(touch.clientX, touch.clientY)
+  }, [startLongPress, hasPointerEvents])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (hasPointerEvents || !pointerStartRef.current) return
+
+    const touch = e.touches[0]
+    const deltaX = Math.abs(touch.clientX - pointerStartRef.current.x)
+    const deltaY = Math.abs(touch.clientY - pointerStartRef.current.y)
+
+    if (deltaX > MOVEMENT_THRESHOLD || deltaY > MOVEMENT_THRESHOLD) {
+      hasMovedRef.current = true
+      cancelLongPress()
+    }
+  }, [cancelLongPress, hasPointerEvents])
+
+  const handleTouchEnd = useCallback(() => {
+    if (hasPointerEvents) return
+    cancelLongPress()
+  }, [cancelLongPress, hasPointerEvents])
+
+  const handleTouchCancel = useCallback(() => {
+    if (hasPointerEvents) return
+    cancelLongPress()
+  }, [cancelLongPress, hasPointerEvents])
 
   const handleThemeClick = useCallback(() => {
     if (!hasMovedRef.current) {
       toggleTheme()
-      // Light vibration for theme change
       if ('vibrate' in navigator) {
         navigator.vibrate(20)
       }
     }
   }, [toggleTheme])
-
-  const handleThemeMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    // Only enable movement detection on non-touch devices
-    if (isTouchDevice) return
-    
-    // Check if touch moved significantly
-    if ('touches' in e && touchStartRef.current) {
-      const touch = e.touches[0]
-      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x)
-      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y)
-      // Allow small movement (10px threshold) to account for natural finger wobble
-      if (deltaX > 10 || deltaY > 10) {
-        hasMovedRef.current = true
-        handleThemePressEnd()
-      }
-    } else if (!('touches' in e)) {
-      hasMovedRef.current = true
-      handleThemePressEnd()
-    }
-  }, [isTouchDevice, handleThemePressEnd])
-
-  const handleTouchCancel = useCallback(() => {
-    hasMovedRef.current = true
-    handleThemePressEnd()
-  }, [handleThemePressEnd])
 
   const handleFullscreenToggle = useCallback(async () => {
     await toggleFullscreen()
@@ -145,7 +224,7 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
             whileTap={{ scale: 0.95 }}
             className="text-foreground font-semibold text-lg tracking-tight"
           >
-            ThinkLabz
+            ZeroDot
           </motion.button>
 
           {/* Desktop Navigation */}
@@ -155,7 +234,7 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
               onClick={onMenuClick}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="p-2 rounded-lg hover:bg-secondary/80 transition-all duration-300 hover:shadow-lg"
               aria-label="Menu"
             >
               <Menu className="w-5 h-5 text-foreground" />
@@ -166,7 +245,7 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
               onClick={onSearchClick}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="p-2 rounded-lg hover:bg-secondary/80 transition-all duration-300 hover:shadow-lg"
               aria-label="Search"
             >
               <Search className="w-5 h-5 text-foreground" />
@@ -174,18 +253,23 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
 
             {/* Theme Switcher */}
             <motion.button
-              onMouseDown={handleThemePressStart}
-              onMouseUp={handleThemePressEnd}
-              onMouseLeave={handleThemePressEnd}
-              onMouseMove={handleThemeMove}
-              onTouchStart={handleThemePressStart}
-              onTouchEnd={handleThemePressEnd}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
               onTouchCancel={handleTouchCancel}
-              onTouchMove={handleThemeMove}
               onClick={handleThemeClick}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="p-2 rounded-lg hover:bg-secondary/80 transition-all duration-300 hover:shadow-lg"
               aria-label="Toggle theme"
               style={{ touchAction: 'none' }}
             >
@@ -207,7 +291,7 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
               onClick={handleFullscreenToggle}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="p-2 rounded-lg hover:bg-secondary/80 transition-all duration-300 hover:shadow-lg"
               aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             >
               <AnimatePresence mode="wait">
@@ -243,7 +327,7 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
               onClick={onMenuClick}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="p-2 rounded-lg hover:bg-secondary/80 transition-all duration-300 hover:shadow-lg"
               aria-label="Menu"
             >
               <Menu className="w-5 h-5 text-foreground" />
@@ -254,7 +338,7 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
               onClick={onSearchClick}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="p-2 rounded-lg hover:bg-secondary/80 transition-all duration-300 hover:shadow-lg"
               aria-label="Search"
             >
               <Search className="w-5 h-5 text-foreground" />
@@ -262,18 +346,23 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
 
             {/* Theme Switcher */}
             <motion.button
-              onMouseDown={handleThemePressStart}
-              onMouseUp={handleThemePressEnd}
-              onMouseLeave={handleThemePressEnd}
-              onMouseMove={handleThemeMove}
-              onTouchStart={handleThemePressStart}
-              onTouchEnd={handleThemePressEnd}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
               onTouchCancel={handleTouchCancel}
-              onTouchMove={handleThemeMove}
               onClick={handleThemeClick}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="p-2 rounded-lg hover:bg-secondary/80 transition-all duration-300 hover:shadow-lg"
               aria-label="Toggle theme"
               style={{ touchAction: 'none' }}
             >
@@ -295,7 +384,7 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
               onClick={handleFullscreenToggle}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              className="p-2 rounded-lg hover:bg-secondary/80 transition-all duration-300 hover:shadow-lg"
               aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             >
               <AnimatePresence mode="wait">
@@ -371,11 +460,11 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick }: NavbarProps)
           >
             <div className="px-4 py-4 space-y-2">
               {[
-                { id: 'about', title: 'About ThinkLabz', content: 'ThinkLabz is a premium poetry platform dedicated to sharing beautiful verses and creative expressions.' },
+                { id: 'about', title: 'About ZeroDot', content: 'ZeroDot is a premium poetry platform dedicated to sharing beautiful verses and creative expressions.' },
                 { id: 'privacy', title: 'Privacy Policy', content: 'We value your privacy. Your data is never shared with third parties without your consent.' },
-                { id: 'terms', title: 'Terms of Service', content: 'By using ThinkLabz, you agree to our terms of service and community guidelines.' },
+                { id: 'terms', title: 'Terms of Service', content: 'By using ZeroDot, you agree to our terms of service and community guidelines.' },
                 { id: 'faq', title: 'FAQ', content: 'Q: How do I search for poems?\nA: Click the search icon and use filters to find poems by title, text, category, or month.' },
-                { id: 'contact', title: 'Contact', content: 'Reach us at hello@thinklabz.com for any inquiries or feedback.' }
+                { id: 'contact', title: 'Contact', content: 'Reach us at hello@zerodot.in for any inquiries or feedback.' }
               ].map((section) => (
                 <div key={section.id} className="border border-border/20 rounded-xl overflow-hidden bg-secondary/30 backdrop-blur-sm">
                   <motion.button

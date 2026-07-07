@@ -6,10 +6,12 @@ import HowToUse from './components/HowToUse'
 import PoetryGrid from './components/PoetryGrid'
 import ErrorBoundary from './components/ErrorBoundary'
 import AdminLoginModal from './components/AdminLoginModal'
+import SearchBar from './components/SearchBar'
+import RandomPoemCard from './components/RandomPoemCard'
+import AnimatedBackground from './components/AnimatedBackground'
 import { subscribeToPoems, PoemWithId } from './services/poems'
 
 const PoemReader = lazy(() => import('./components/PoemReader'))
-const SearchOverlay = lazy(() => import('./components/SearchOverlay'))
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'))
 const Admin = lazy(() => import('./pages/Admin'))
 const NavigationDrawer = lazy(() => import('./components/NavigationDrawer'))
@@ -18,11 +20,69 @@ function Home() {
   const [poems, setPoems] = useState<PoemWithId[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentPoem, setCurrentPoem] = useState<PoemWithId | null>(null)
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false)
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [blurLevel, setBlurLevel] = useState(0)
   const navigate = useNavigate()
+
+  // Restore scroll position and state from localStorage on mount
+  useEffect(() => {
+    const savedScroll = localStorage.getItem('zerodot_scroll_position')
+    const savedTheme = localStorage.getItem('zerodot_theme')
+    const savedSearchQuery = localStorage.getItem('zerodot_search_query')
+    const savedFilters = localStorage.getItem('zerodot_filters')
+
+    // Restore scroll position
+    if (savedScroll) {
+      window.scrollTo(0, parseInt(savedScroll, 10))
+    }
+
+    // Restore theme
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme)
+    }
+
+    // Note: Search query and filters would need to be passed to SearchOverlay
+    // This is a placeholder for future implementation
+    if (savedSearchQuery) {
+      console.log('Restored search query:', savedSearchQuery)
+    }
+    if (savedFilters) {
+      console.log('Restored filters:', savedFilters)
+    }
+  }, [])
+
+  // Save scroll position on scroll and update blur level
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY
+      localStorage.setItem('zerodot_scroll_position', scrollY.toString())
+      
+      // Calculate blur level based on scroll position
+      // Top: slightly blurred (0px)
+      // Middle: more blur (up to 8px)
+      // Reader mode (when poem is open): maximum blur (24px)
+      const maxScroll = window.innerHeight * 2
+      const newBlurLevel = currentPoem 
+        ? 24 
+        : Math.min(8, (scrollY / maxScroll) * 8)
+      
+      setBlurLevel(newBlurLevel)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [currentPoem])
+
+  // Save current poem to localStorage
+  useEffect(() => {
+    if (currentPoem) {
+      localStorage.setItem('zerodot_current_poem', currentPoem.id)
+    } else {
+      localStorage.removeItem('zerodot_current_poem')
+    }
+  }, [currentPoem])
 
   useEffect(() => {
     const unsubscribe = subscribeToPoems(
@@ -30,6 +90,15 @@ function Home() {
         setPoems(updatedPoems)
         setIsLoading(false)
         setError(null)
+
+        // Restore current poem if it exists
+        const savedPoemId = localStorage.getItem('zerodot_current_poem')
+        if (savedPoemId && updatedPoems.length > 0) {
+          const savedPoem = updatedPoems.find(p => p.id === savedPoemId)
+          if (savedPoem) {
+            setCurrentPoem(savedPoem)
+          }
+        }
       },
       (err) => {
         console.error('Error listening to poems:', err)
@@ -72,10 +141,13 @@ function Home() {
     navigate('/admin')
   }
 
+
   return (
-    <>
-      <Navbar onSearchClick={() => setIsSearchOpen(true)} onMenuClick={() => setIsNavDrawerOpen(true)} />
+    <AnimatedBackground blurLevel={blurLevel}>
+      <Navbar onSearchClick={() => {}} onMenuClick={() => setIsNavDrawerOpen(true)} onAdminTrigger={handleAdminTrigger} />
       <Hero poems={poems} />
+      <SearchBar poems={poems} onPoemClick={handlePoemClick} />
+      <RandomPoemCard poems={poems} />
       <HowToUse />
       <PoetryGrid
         poems={poems}
@@ -89,16 +161,6 @@ function Home() {
           onClose={handleClose}
           onNext={handleNext}
           onPrevious={handlePrevious}
-        />
-      </Suspense>
-      <Suspense fallback={null}>
-        <SearchOverlay
-          isOpen={isSearchOpen}
-          onClose={() => setIsSearchOpen(false)}
-          poems={poems}
-          isLoading={isLoading}
-          onPoemClick={handlePoemClick}
-          onAdminTrigger={handleAdminTrigger}
         />
       </Suspense>
       <Suspense fallback={null}>
@@ -117,7 +179,7 @@ function Home() {
         onClose={() => setIsAdminLoginOpen(false)}
         onLoginSuccess={handleAdminLoginSuccess}
       />
-    </>
+    </AnimatedBackground>
   )
 }
 

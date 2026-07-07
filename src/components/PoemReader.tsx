@@ -1,10 +1,11 @@
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion'
 import { useEffect, useState, useRef, useCallback, memo } from 'react'
-import { Instagram, Copy, Share2, X } from 'lucide-react'
+import { Instagram, Copy, Share2, X, FileText } from 'lucide-react'
 import { PoemWithId } from '../services/poems'
 import { triggerHaptic } from '../utils/haptic'
 import Toast from './admin/Toast'
 import { toggleFullscreen } from '../utils/fullscreen'
+import ShareMenu from './ShareMenu'
 
 interface PoemReaderProps {
   poems: PoemWithId[]
@@ -18,8 +19,14 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
   const [isClosing, setIsClosing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [showIndicator, setShowIndicator] = useState(true)
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false)
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [zoomScale, setZoomScale] = useState(1)
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 })
+  const [isLetterMode, setIsLetterMode] = useState(false)
   const currentIndex = currentPoem ? poems.findIndex(p => p.id === currentPoem.id) : null
   const indicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const imageRef = useRef<HTMLDivElement>(null)
   
   // Touch detection for single-tap fullscreen
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
@@ -49,51 +56,6 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
     }, 300)
   }, [onClose])
 
-  const handleShare = useCallback(async () => {
-    triggerHaptic(15)
-    
-    if (!currentPoem) return
-
-    const websiteUrl = 'https://thinklabz.vercel.app'
-    let shareContent: string
-
-    if (currentPoem.instagram) {
-      // Share with Instagram post URL
-      shareContent = `✨ ${currentPoem.title || 'Poem'}
-
-Read this poem on Instagram:
-${currentPoem.instagram}
-
-Discover more poems:
-${websiteUrl}`
-    } else {
-      // Fallback: share title and website link
-      shareContent = `✨ ${currentPoem.title || 'Poem'}
-
-Discover more poems:
-${websiteUrl}`
-    }
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: currentPoem.title || 'Poem',
-          text: shareContent,
-        })
-      } catch (error) {
-        // User cancelled or share failed, fall back to clipboard
-        await navigator.clipboard.writeText(shareContent)
-        setToast({ message: 'Share content copied.', type: 'success' })
-        setTimeout(() => setToast(null), 3000)
-      }
-    } else {
-      // Browser doesn't support Web Share API, copy to clipboard
-      await navigator.clipboard.writeText(shareContent)
-      setToast({ message: 'Share content copied.', type: 'success' })
-      setTimeout(() => setToast(null), 3000)
-    }
-  }, [currentPoem])
-
   // Prevent context menu on poem content
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -102,6 +64,39 @@ ${websiteUrl}`
   // Prevent copy/cut
   const handleCopyCut = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault()
+  }, [])
+
+  // Zoom handlers
+  const handleDoubleClick = useCallback(() => {
+    if (!isZoomed) {
+      setIsZoomed(true)
+      setZoomScale(2)
+      setZoomPosition({ x: 0, y: 0 })
+    } else {
+      setIsZoomed(false)
+      setZoomScale(1)
+      setZoomPosition({ x: 0, y: 0 })
+    }
+  }, [isZoomed])
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (!isZoomed) return
+    e.preventDefault()
+    
+    const delta = e.deltaY > 0 ? -0.1 : 0.1
+    const newScale = Math.max(1, Math.min(4, zoomScale + delta))
+    setZoomScale(newScale)
+    
+    if (newScale === 1) {
+      setIsZoomed(false)
+      setZoomPosition({ x: 0, y: 0 })
+    }
+  }, [isZoomed, zoomScale])
+
+  const handleZoomClose = useCallback(() => {
+    setIsZoomed(false)
+    setZoomScale(1)
+    setZoomPosition({ x: 0, y: 0 })
   }, [])
 
   // Handle swipe gestures
@@ -221,7 +216,11 @@ ${websiteUrl}`
       resetIndicatorTimeout()
 
       if (e.key === 'Escape') {
-        handleClose()
+        if (isZoomed) {
+          handleZoomClose()
+        } else {
+          handleClose()
+        }
       } else if (e.key === 'ArrowRight') {
         onNext()
       } else if (e.key === 'ArrowLeft') {
@@ -231,7 +230,7 @@ ${websiteUrl}`
 
     window.addEventListener('keydown', handleKeyDown, { passive: true })
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentIndex, onNext, onPrevious, handleClose, resetIndicatorTimeout])
+  }, [currentIndex, onNext, onPrevious, handleClose, resetIndicatorTimeout, isZoomed, handleZoomClose])
 
   // Initial indicator fade
   useEffect(() => {
@@ -276,12 +275,18 @@ ${websiteUrl}`
         
           {/* Background with image */}
           <motion.div
+            ref={imageRef}
             className="absolute inset-0 w-full h-full"
             style={{ 
               scale,
               opacity,
-              willChange: 'transform'
+              willChange: 'transform',
+              transform: isZoomed ? `scale(${zoomScale}) translate(${zoomPosition.x}px, ${zoomPosition.y}px)` : undefined,
+              transition: isZoomed ? 'transform 0.2s ease-out' : 'none',
+              cursor: isZoomed ? 'zoom-out' : 'zoom-in'
             }}
+            onDoubleClick={handleDoubleClick}
+            onWheel={handleWheel}
           >
             {currentPoem.image ? (
               <img
@@ -353,14 +358,6 @@ ${websiteUrl}`
           {/* Dark overlay */}
           <div className="absolute inset-0 bg-black/40" />
 
-          {/* Grain texture */}
-          <div 
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
-            }}
-          />
-
           {/* Page indicator */}
           <AnimatePresence>
             {showIndicator && currentIndex !== null && (
@@ -384,7 +381,9 @@ ${websiteUrl}`
             transition={{ duration: 0.4, delay: 0.1 }}
             className="relative z-10 w-full h-full flex items-center justify-center px-4 sm:px-8 md:px-16"
           >
-            <div className="max-w-4xl w-full px-4">
+            <div 
+              className="max-w-4xl w-full px-4 transition-all duration-300"
+            >
               {/* Poem text */}
               <motion.div
                 key={currentPoem.id}
@@ -396,7 +395,14 @@ ${websiteUrl}`
                 onCopy={handleCopyCut}
                 onCut={handleCopyCut}
               >
-                <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-medium text-white leading-relaxed mb-6 sm:mb-8 select-none">
+                <p 
+                  className={`leading-relaxed mb-6 sm:mb-8 select-none transition-all duration-300 ${isLetterMode ? 'text-2xl md:text-3xl lg:text-4xl font-normal italic' : 'text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-medium text-white'}`}
+                  style={isLetterMode ? {
+                    fontFamily: "'Cormorant Garamond', 'EB Garamond', 'Playfair Display', Georgia, serif",
+                    letterSpacing: '0.02em',
+                    lineHeight: '1.6',
+                  } : {}}
+                >
                   {currentPoem.text}
                 </p>
               </motion.div>
@@ -405,7 +411,13 @@ ${websiteUrl}`
 
           {/* Close button */}
           <motion.button
-            onClick={handleClose}
+            onClick={() => {
+              if (isZoomed) {
+                handleZoomClose()
+              } else {
+                handleClose()
+              }
+            }}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
@@ -451,7 +463,10 @@ ${websiteUrl}`
             </motion.button>
 
             <motion.button
-              onClick={handleShare}
+              onClick={() => {
+                triggerHaptic(15)
+                setIsShareMenuOpen(true)
+              }}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               className="p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors"
@@ -459,10 +474,33 @@ ${websiteUrl}`
             >
               <Share2 className="w-5 h-5 text-white" />
             </motion.button>
+
+            <motion.button
+              onClick={() => {
+                triggerHaptic(15)
+                setIsLetterMode(!isLetterMode)
+              }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className={`p-3 rounded-full backdrop-blur-sm transition-colors ${isLetterMode ? 'bg-amber-500/30 hover:bg-amber-500/50' : 'bg-white/10 hover:bg-white/20'}`}
+              aria-label="Letter Mode"
+            >
+              <FileText className="w-5 h-5 text-white" />
+            </motion.button>
           </motion.div>
         </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Share Menu */}
+      {currentPoem && (
+        <ShareMenu
+          isOpen={isShareMenuOpen}
+          onClose={() => setIsShareMenuOpen(false)}
+          poem={currentPoem}
+        />
+      )}
+      
       {toast && (
         <Toast
           message={toast.message}

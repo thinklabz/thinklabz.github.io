@@ -22,14 +22,14 @@ export default function Hero({ poems }: HeroProps) {
 
   if (isLoading) {
     return (
-      <div className="w-full flex justify-center pt-24 px-4 pb-8">
+      <div className="w-full flex justify-center pt-28 px-4 pb-8">
         <div className="relative w-[94%] h-[40vh] md:h-[55vh] rounded-3xl overflow-hidden bg-secondary/30 animate-pulse" />
       </div>
     )
   }
 
   return (
-    <div className="w-full flex justify-center pt-24 px-4 pb-8">
+    <div className="w-full flex justify-center pt-28 px-4 pb-8">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -55,27 +55,20 @@ export default function Hero({ poems }: HeroProps) {
         
         {/* Dark Overlay */}
         <div className="absolute inset-0 bg-black/40" />
-        
-        {/* Grain Texture */}
-        <div 
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
-          }}
-        />
 
         {/* Content */}
         <div className="relative z-10 h-full flex flex-col items-center justify-center px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="max-w-3xl"
+            style={{ textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
           >
-            <p className="text-sm uppercase tracking-widest text-muted-foreground mb-4 select-none">
+            <p className="text-sm uppercase tracking-widest text-white/70 mb-6 select-none" style={{ letterSpacing: '0.2em' }}>
               Today's Quote
             </p>
-            <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground leading-relaxed select-none" style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', letterSpacing: '0.02em', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+            <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-relaxed select-none" style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', letterSpacing: '0.02em', lineHeight: '1.4' }}>
               {quote}
             </h1>
           </motion.div>

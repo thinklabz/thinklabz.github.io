@@ -1,4 +1,4 @@
-# ThinkLabz
+# ZeroDot
 
 A production-ready React application built with Vite, TypeScript, Tailwind CSS, Framer Motion, and Lucide React.
 

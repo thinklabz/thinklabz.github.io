@@ -14,19 +14,19 @@ const sections: Section[] = [
   {
     id: 'company',
     title: 'Company',
-    content: 'ThinkLabz is a digital poetry sanctuary.',
+    content: 'ZeroDot is a digital poetry sanctuary.',
   },
   {
     id: 'about',
     title: 'About',
-    content: 'ThinkLabz is a premium poetry platform dedicated to sharing beautiful verses and creative expressions.',
+    content: 'ZeroDot is a premium poetry platform dedicated to sharing beautiful verses and creative expressions.',
   },
   {
     id: 'contact',
     title: 'Contact',
     content: 'Get in touch with us.',
     links: [
-      { label: 'Email us', url: 'mailto:contact@thinklabz.com' },
+      { label: 'Email us', url: 'mailto:contact@zerodot.in' },
     ],
   },
   {
@@ -44,7 +44,7 @@ const sections: Section[] = [
     content: 'Additional options.',
     links: [
       { label: 'Suggest a Poem', url: 'https://instagram.com/_ft.avx' },
-      { label: 'Feedback', url: 'mailto:avxdraft@gmail.com?subject=ThinkLabz%20Feedback' },
+      { label: 'Feedback', url: 'mailto:avxdraft@gmail.com?subject=ZeroDot%20Feedback' },
     ],
   },
   {
@@ -59,7 +59,7 @@ const sections: Section[] = [
   {
     id: 'credits',
     title: 'Credits',
-    content: '© 2026 ThinkLabz\nBuilt for thoughts that deserve to stay.',
+    content: '© 2026 ZeroDot\nBuilt for thoughts that deserve to stay.',
   },
 ]
 

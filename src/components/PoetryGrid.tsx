@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { PoemWithId } from '../services/poems'
 import { triggerHaptic } from '../utils/haptic'
-import { memo } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 
 interface PoetryGridProps {
   poems: PoemWithId[]
@@ -10,6 +10,51 @@ interface PoetryGridProps {
 }
 
 const PoetryGrid = memo(function PoetryGrid({ poems, isLoading, onCardClick }: PoetryGridProps) {
+  const [visiblePoems, setVisiblePoems] = useState<Set<string>>(new Set())
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const cardRefs = useRef<Map<string, HTMLElement>>(new Map())
+
+  // Set up IntersectionObserver for lazy loading
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      // Fallback: show all poems if IntersectionObserver not supported
+      setVisiblePoems(new Set(poems.map(p => p.id)))
+      return
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const poemId = entry.target.getAttribute('data-poem-id')
+            if (poemId) {
+              setVisiblePoems((prev) => new Set([...prev, poemId]))
+              observerRef.current?.unobserve(entry.target)
+            }
+          }
+        })
+      },
+      {
+        rootMargin: '50px',
+        threshold: 0.1,
+      }
+    )
+
+    // Observe all poem cards
+    cardRefs.current.forEach((element) => {
+      observerRef.current?.observe(element)
+    })
+
+    return () => {
+      observerRef.current?.disconnect()
+    }
+  }, [poems])
+
+  // Update refs when poems change
+  useEffect(() => {
+    cardRefs.current.clear()
+    setVisiblePoems(new Set())
+  }, [poems])
   // Prevent context menu and copy/cut
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -92,6 +137,12 @@ const PoetryGrid = memo(function PoetryGrid({ poems, isLoading, onCardClick }: P
           {poems.map((poem, index) => (
             <motion.div
               key={poem.id}
+              ref={(el) => {
+                if (el) {
+                  cardRefs.current.set(poem.id, el)
+                }
+              }}
+              data-poem-id={poem.id}
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true, margin: "-50px" }}
@@ -100,12 +151,12 @@ const PoetryGrid = memo(function PoetryGrid({ poems, isLoading, onCardClick }: P
                 delay: index * 0.05,
                 ease: [0.22, 1, 0.36, 1] 
               }}
-              whileHover={{ scale: 1.03 }}
+              whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0, 0, 0, 0.15)' }}
               onClick={() => {
                 triggerHaptic(15)
                 onCardClick(poem)
               }}
-              className="relative aspect-square rounded-2xl overflow-hidden cursor-pointer group no-select"
+              className="relative aspect-square rounded-2xl overflow-hidden cursor-pointer group no-select shadow-lg hover:shadow-xl transition-shadow duration-300"
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
@@ -120,7 +171,7 @@ const PoetryGrid = memo(function PoetryGrid({ poems, isLoading, onCardClick }: P
               onCut={handleCopyCut}
             >
               {/* Background Image */}
-              {poem.image ? (
+              {visiblePoems.has(poem.id) && poem.image ? (
                 <img
                   src={poem.image}
                   alt={poem.title}
@@ -135,17 +186,14 @@ const PoetryGrid = memo(function PoetryGrid({ poems, isLoading, onCardClick }: P
               
               {/* Blur Effect */}
               <div className="absolute inset-0 backdrop-blur-sm" />
-              
-              {/* Grain Texture */}
-              <div 
-                className="absolute inset-0 opacity-10"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
-                }}
-              />
 
               {/* Dark Overlay */}
-              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors duration-300" />
+              <div 
+                className="absolute inset-0 transition-colors duration-300"
+                style={{ 
+                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                }}
+              />
 
               {/* Poem Text */}
               <div className="absolute bottom-0 left-0 right-0 p-4">
