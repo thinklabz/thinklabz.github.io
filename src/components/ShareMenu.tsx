@@ -66,11 +66,41 @@ export default function ShareMenu({ isOpen, onClose, poem }: ShareMenuProps) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed bottom-0 sm:bottom-8 left-1/2 -translate-x-1/2 z-[301] w-[92vw] sm:w-[90%] max-w-[420px] sm:max-w-sm"
+              className="
+                fixed
+                inset-x-0
+                bottom-0
+                z-[301]
+                w-full
+                px-2
+                sm:inset-x-auto
+                sm:left-1/2
+                sm:-translate-x-1/2
+                sm:top-1/2
+                sm:bottom-auto
+                sm:-translate-y-1/2
+                sm:w-[420px]
+                sm:max-w-[90vw]
+                sm:px-0
+                max-h-[92dvh]
+                flex
+                flex-col
+              "
             >
-              <div className="bg-[rgba(15,15,15,0.45)] backdrop-blur-24 -webkit-backdrop-blur-24 rounded-t-3xl sm:rounded-2xl border border-white/12 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] pb-8 sm:pb-4">
+              <div
+                className="
+                  bg-[rgba(15,15,15,0.45)] backdrop-blur-24 -webkit-backdrop-blur-24
+                  rounded-t-3xl sm:rounded-2xl border border-white/12
+                  shadow-[0_20px_60px_rgba(0,0,0,0.35)]
+                  flex flex-col
+                  max-h-[92dvh]
+                  overflow-hidden
+                  p-4
+                "
+                style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1rem)' }}
+              >
                 {/* Header */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 shrink-0">
                   <h3 className="text-lg font-semibold text-white">Share</h3>
                   <motion.button
                     onClick={onClose}
@@ -83,7 +113,7 @@ export default function ShareMenu({ isOpen, onClose, poem }: ShareMenuProps) {
                 </div>
 
                 {/* Share Options */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto">
                   {shareOptions.map((option, index) => (
                     <motion.button
                       key={index}
@@ -93,9 +123,9 @@ export default function ShareMenu({ isOpen, onClose, poem }: ShareMenuProps) {
                       onClick={option.action}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/6 backdrop-blur-16 border border-white/10 hover:bg-white/10 transition-all"
+                      className="flex flex-row sm:flex-col items-center justify-center gap-3 sm:gap-2 p-4 rounded-xl bg-white/6 backdrop-blur-16 border border-white/10 hover:bg-white/10 transition-all"
                     >
-                      <div className="text-white">{option.icon}</div>
+                      <div className="text-white shrink-0">{option.icon}</div>
                       <span className="text-sm text-white">{option.label}</span>
                     </motion.button>
                   ))}
