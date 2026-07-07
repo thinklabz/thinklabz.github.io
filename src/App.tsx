@@ -215,7 +215,7 @@ function Home() {
         structuredData={currentPoem ? [poemStructuredData!, breadcrumbStructuredData!] : structuredData}
       />
       <AnimatedBackground blurLevel={blurLevel}>
-        <Navbar onSearchClick={() => {}} onMenuClick={() => setIsNavDrawerOpen(true)} onAdminTrigger={handleAdminTrigger} />
+        <Navbar onMenuClick={() => setIsNavDrawerOpen(true)} onAdminTrigger={handleAdminTrigger} />
         <Hero poems={poems} />
         <SearchBar poems={poems} onPoemClick={handlePoemClick} onAdminTrigger={handleAdminTrigger} />
         <RandomPoemCard poems={poems} />

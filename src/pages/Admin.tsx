@@ -8,6 +8,7 @@ import PoemCard from '../components/admin/PoemCard'
 import Skeleton from '../components/admin/Skeleton'
 import Toast, { ToastType } from '../components/admin/Toast'
 import DeleteConfirmDialog from '../components/admin/DeleteConfirmDialog'
+import FrameLibrary from '../components/admin/FrameLibrary'
 import SEO from '../components/SEO'
 
 export default function Admin() {
@@ -18,6 +19,7 @@ export default function Admin() {
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [poemToDelete, setPoemToDelete] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'poems' | 'frames'>('poems')
 
   useEffect(() => {
     fetchPoems()
@@ -109,7 +111,7 @@ export default function Admin() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Manage your poetry collection</p>
+            <p className="text-muted-foreground mt-1">Manage your poetry collection and frames</p>
           </div>
           <button
             onClick={handleLogout}
@@ -120,48 +122,82 @@ export default function Admin() {
           </button>
         </div>
 
-        {/* Form Section */}
-        <div className="bg-secondary/30 border border-border/20 rounded-xl p-6 mb-8">
-          <h2 className="text-xl font-semibold text-foreground mb-6">
-            {editingPoem ? 'Edit Poem' : 'Create New Poem'}
-          </h2>
-          <PoemForm
-            editingPoem={editingPoem}
-            onSubmit={handleSubmit}
-            onCancel={handleCancelEdit}
-          />
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-8">
+          <button
+            onClick={() => setActiveTab('poems')}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              activeTab === 'poems'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary/30 text-foreground hover:bg-secondary/50'
+            }`}
+          >
+            Poems
+          </button>
+          <button
+            onClick={() => setActiveTab('frames')}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              activeTab === 'frames'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary/30 text-foreground hover:bg-secondary/50'
+            }`}
+          >
+            Frames
+          </button>
         </div>
 
-        {/* Existing Poems Section */}
-        <div>
-          <h2 className="text-xl font-semibold text-foreground mb-6">
-            Existing Poems ({poems.length})
-          </h2>
-          
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} />
-              ))}
+        {/* Poems Tab */}
+        {activeTab === 'poems' && (
+          <>
+            {/* Form Section */}
+            <div className="bg-secondary/30 border border-border/20 rounded-xl p-6 mb-8">
+              <h2 className="text-xl font-semibold text-foreground mb-6">
+                {editingPoem ? 'Edit Poem' : 'Create New Poem'}
+              </h2>
+              <PoemForm
+                editingPoem={editingPoem}
+                onSubmit={handleSubmit}
+                onCancel={handleCancelEdit}
+              />
             </div>
-          ) : poems.length === 0 ? (
-            <div className="bg-secondary/30 border border-border/20 rounded-xl p-12 text-center">
-              <p className="text-muted-foreground text-lg">No poems yet</p>
-              <p className="text-muted-foreground text-sm mt-2">Create your first poem using the form above</p>
+
+            {/* Existing Poems Section */}
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-6">
+                Existing Poems ({poems.length})
+              </h2>
+              
+              {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(6)].map((_, i) => (
+                    <Skeleton key={i} />
+                  ))}
+                </div>
+              ) : poems.length === 0 ? (
+                <div className="bg-secondary/30 border border-border/20 rounded-xl p-12 text-center">
+                  <p className="text-muted-foreground text-lg">No poems yet</p>
+                  <p className="text-muted-foreground text-sm mt-2">Create your first poem using the form above</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {poems.map((poem) => (
+                    <PoemCard
+                      key={poem.id}
+                      poem={poem}
+                      onEdit={handleEdit}
+                      onDelete={handleDeleteClick}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {poems.map((poem) => (
-                <PoemCard
-                  key={poem.id}
-                  poem={poem}
-                  onEdit={handleEdit}
-                  onDelete={handleDeleteClick}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+          </>
+        )}
+
+        {/* Frames Tab */}
+        {activeTab === 'frames' && (
+          <FrameLibrary />
+        )}
       </div>
 
       {/* Toast */}

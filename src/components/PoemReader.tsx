@@ -1,11 +1,20 @@
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion'
 import { useEffect, useState, useRef, useCallback, memo } from 'react'
-import { Instagram, Copy, Share2, X, FileText } from 'lucide-react'
+import { Instagram, X, FileText, Image } from 'lucide-react'
 import { PoemWithId } from '../services/poems'
 import { triggerHaptic } from '../utils/haptic'
 import Toast from './admin/Toast'
 import { toggleFullscreen } from '../utils/fullscreen'
-import ShareMenu from './ShareMenu'
+import { CardType, CardCustomization, FrameWithId } from '../types/frames'
+import ClassicTemplate from './cards/ClassicTemplate'
+import FrameTemplate from './cards/FrameTemplate'
+import CardTypeSelector from './cards/CardTypeSelector'
+import TemplatesModal from './cards/TemplatesModal'
+import ResponsiveDrawer from './cards/ResponsiveDrawer'
+import BottomActionDock from './cards/BottomActionDock'
+import { getEnabledFrames } from '../services/frames'
+import { sharePoem } from '../utils/share'
+import { downloadCard } from '../utils/download'
 
 interface PoemReaderProps {
   poems: PoemWithId[]
@@ -19,11 +28,42 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
   const [isClosing, setIsClosing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [showIndicator, setShowIndicator] = useState(true)
-  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false)
+  const handleShare = async () => {
+    if (currentPoem) {
+      await sharePoem(currentPoem)
+    }
+  }
+
+  const handleDownload = async () => {
+    if (cardRef.current && currentPoem) {
+      try {
+        await downloadCard(cardRef.current, `${currentPoem.title || 'poem'}-card.png`)
+      } catch (error) {
+        console.error('Download failed:', error)
+        setToast({ message: 'Download failed. Please try again.', type: 'error' })
+      }
+    }
+  }
   const [isZoomed, setIsZoomed] = useState(false)
   const [zoomScale, setZoomScale] = useState(1)
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 })
   const [isLetterMode, setIsLetterMode] = useState(false)
+  const [isCardMode, setIsCardMode] = useState(false)
+  const [cardType, setCardType] = useState<CardType>('classic')
+  const [customization, setCustomization] = useState<CardCustomization>({
+    font: "'Playfair Display', serif",
+    fontSize: 32,
+    letterSpacing: 0.02,
+    lineHeight: 1.4,
+    userName: 'ZeroDot',
+    backgroundBlur: 0,
+    showUserName: true,
+    showBrand: true
+  })
+  const [selectedFrame, setSelectedFrame] = useState<FrameWithId | undefined>()
+  const [isCustomizeDrawerOpen, setIsCustomizeDrawerOpen] = useState(false)
+  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
   const currentIndex = currentPoem ? poems.findIndex(p => p.id === currentPoem.id) : null
   const indicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const imageRef = useRef<HTMLDivElement>(null)
@@ -187,13 +227,39 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
     }, 2000)
   }, [])
 
+  // Load frames when card mode is enabled
+  useEffect(() => {
+    if (isCardMode && cardType === 'frame') {
+      loadFrames()
+    }
+  }, [isCardMode, cardType])
+
+  const loadFrames = async () => {
+    try {
+      const enabledFrames = await getEnabledFrames()
+      if (!selectedFrame && enabledFrames.length > 0) {
+        setSelectedFrame(enabledFrames[0])
+      }
+    } catch (error) {
+      console.error('Error loading frames:', error)
+    }
+  }
+
+  // Reset editor UI when exiting card mode
+  useEffect(() => {
+    if (!isCardMode) {
+      setIsCustomizeDrawerOpen(false)
+      setIsTemplatesModalOpen(false)
+    }
+  }, [isCardMode])
+
   // Preload adjacent images with decoding
   useEffect(() => {
     if (currentIndex === null || poems.length === 0) return
 
     const preloadImage = (url: string | null) => {
       if (url) {
-        const img = new Image()
+        const img = new window.Image()
         img.src = url
         img.decode().catch(() => {}) // Decode before display
       }
@@ -260,7 +326,7 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
             dragTransition={{
               bounceStiffness: 300,
               bounceDamping: 30,
- }}
+            }}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             onTouchStart={handleTouchStart}
@@ -460,32 +526,6 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
             <motion.button
               onClick={() => {
                 triggerHaptic(15)
-                navigator.clipboard.writeText(currentPoem.text)
-              }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors"
-              aria-label="Copy"
-            >
-              <Copy className="w-5 h-5 text-white" />
-            </motion.button>
-
-            <motion.button
-              onClick={() => {
-                triggerHaptic(15)
-                setIsShareMenuOpen(true)
-              }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors"
-              aria-label="Share"
-            >
-              <Share2 className="w-5 h-5 text-white" />
-            </motion.button>
-
-            <motion.button
-              onClick={() => {
-                triggerHaptic(15)
                 setIsLetterMode(!isLetterMode)
               }}
               whileHover={{ scale: 1.1 }}
@@ -495,19 +535,106 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
             >
               <FileText className="w-5 h-5 text-white" />
             </motion.button>
+
+            <motion.button
+              onClick={() => {
+                triggerHaptic(15)
+                setIsCardMode(!isCardMode)
+              }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className={`p-3 rounded-full backdrop-blur-sm transition-colors ${isCardMode ? 'bg-blue-500/30 hover:bg-blue-500/50' : 'bg-white/10 hover:bg-white/20'}`}
+              aria-label="Card Mode"
+            >
+              <Image className="w-5 h-5 text-white" />
+            </motion.button>
           </motion.div>
+
+          {/* Card Editor Workspace */}
+          <AnimatePresence>
+            {isCardMode && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 z-20 bg-background"
+              >
+                {/* Close Button */}
+                <motion.button
+                  onClick={() => setIsCardMode(false)}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="absolute top-6 right-6 z-30 p-3 rounded-full bg-secondary/20 hover:bg-secondary/30 backdrop-blur-sm transition-colors shadow-lg"
+                  aria-label="Close Editor"
+                >
+                  <X className="w-5 h-5 text-foreground" />
+                </motion.button>
+
+                {/* Editor Canvas - Centered Workspace */}
+                <div className="absolute inset-0 flex items-center justify-center p-6 sm:p-10 md:p-16">
+                  <div ref={cardRef} className="relative w-full max-w-2xl aspect-square bg-muted/10 rounded-2xl shadow-xl shadow-black/10 overflow-hidden">
+                    {cardType === 'classic' ? (
+                      <ClassicTemplate
+                        poem={currentPoem}
+                        customization={customization}
+                        className="w-full h-full"
+                      />
+                    ) : (
+                      selectedFrame && (
+                        <FrameTemplate
+                          poem={currentPoem}
+                          customization={customization}
+                          frame={selectedFrame}
+                          className="w-full h-full"
+                        />
+                      )
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom Action Dock */}
+                <BottomActionDock
+                  onTemplates={() => setIsTemplatesModalOpen(true)}
+                  onCustomize={() => setIsCustomizeDrawerOpen(true)}
+                  onDownload={handleDownload}
+                  onShare={handleShare}
+                />
+
+                {/* Customize Drawer */}
+                <ResponsiveDrawer
+                  isOpen={isCustomizeDrawerOpen}
+                  onClose={() => setIsCustomizeDrawerOpen(false)}
+                  title="Customize Card"
+                >
+                  <CardTypeSelector
+                    customization={customization}
+                    onCustomizationChange={setCustomization}
+                  />
+                </ResponsiveDrawer>
+
+                {/* Templates Modal */}
+                <ResponsiveDrawer
+                  isOpen={isTemplatesModalOpen}
+                  onClose={() => setIsTemplatesModalOpen(false)}
+                  title="Templates"
+                >
+                  <TemplatesModal
+                    cardType={cardType}
+                    onCardTypeChange={setCardType}
+                    selectedFrame={selectedFrame}
+                    onFrameSelect={setSelectedFrame}
+                  />
+                </ResponsiveDrawer>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Share Menu */}
-      {currentPoem && (
-        <ShareMenu
-          isOpen={isShareMenuOpen}
-          onClose={() => setIsShareMenuOpen(false)}
-          poem={currentPoem}
-        />
-      )}
       
       {toast && (
         <Toast

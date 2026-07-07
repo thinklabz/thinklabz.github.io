@@ -1,16 +1,15 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Menu, X, ChevronDown, Sun, Moon, Monitor, Maximize2, Minimize2 } from 'lucide-react'
+import { Menu, X, ChevronDown, Sun, Moon, Monitor, Maximize2, Minimize2 } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { toggleFullscreen, isFullscreen as checkIsFullscreen } from '../utils/fullscreen'
 
 interface NavbarProps {
-  onSearchClick: () => void
   onMenuClick: () => void
   onAdminTrigger?: () => void
 }
 
-const Navbar = memo(function Navbar({ onSearchClick, onMenuClick, onAdminTrigger }: NavbarProps) {
+const Navbar = memo(function Navbar({ onMenuClick, onAdminTrigger }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const { theme, effectiveTheme, toggleTheme } = useTheme()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -240,17 +239,6 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick, onAdminTrigger
               <Menu className="w-5 h-5 text-foreground" />
             </motion.button>
 
-            {/* Search Icon */}
-            <motion.button
-              onClick={onSearchClick}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary/80 transition-all duration-300 hover:shadow-lg"
-              aria-label="Search"
-            >
-              <Search className="w-5 h-5 text-foreground" />
-            </motion.button>
-
             {/* Theme Switcher */}
             <motion.button
               onPointerDown={handlePointerDown}
@@ -331,17 +319,6 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick, onAdminTrigger
               aria-label="Menu"
             >
               <Menu className="w-5 h-5 text-foreground" />
-            </motion.button>
-
-            {/* Search Icon */}
-            <motion.button
-              onClick={onSearchClick}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-lg hover:bg-secondary/80 transition-all duration-300 hover:shadow-lg"
-              aria-label="Search"
-            >
-              <Search className="w-5 h-5 text-foreground" />
             </motion.button>
 
             {/* Theme Switcher */}
@@ -463,7 +440,7 @@ const Navbar = memo(function Navbar({ onSearchClick, onMenuClick, onAdminTrigger
                 { id: 'about', title: 'About ZeroDot', content: 'ZeroDot is a premium poetry platform dedicated to sharing beautiful verses and creative expressions.' },
                 { id: 'privacy', title: 'Privacy Policy', content: 'We value your privacy. Your data is never shared with third parties without your consent.' },
                 { id: 'terms', title: 'Terms of Service', content: 'By using ZeroDot, you agree to our terms of service and community guidelines.' },
-                { id: 'faq', title: 'FAQ', content: 'Q: How do I search for poems?\nA: Click the search icon and use filters to find poems by title, text, category, or month.' },
+                { id: 'faq', title: 'FAQ', content: 'Q: How do I find poems?\nA: Browse the collection to discover poems by title, text, category, or month.' },
                 { id: 'contact', title: 'Contact', content: 'Reach us at hello@zerodot.in for any inquiries or feedback.' }
               ].map((section) => (
                 <div key={section.id} className="border border-border/20 rounded-xl overflow-hidden bg-secondary/30 backdrop-blur-sm">
