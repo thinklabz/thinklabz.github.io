@@ -291,8 +291,11 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
             {currentPoem.image ? (
               <img
                 src={currentPoem.image}
-                alt="Background"
+                alt={`Background image for poem: ${currentPoem.title || 'Untitled'}`}
                 loading="eager"
+                fetchPriority="high"
+                width="1080"
+                height="1080"
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{ transform: 'translate3d(0, 0, 0)' }}
               />
@@ -320,8 +323,9 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
               {poems[currentIndex > 0 ? currentIndex - 1 : poems.length - 1].image ? (
                 <img
                   src={poems[currentIndex > 0 ? currentIndex - 1 : poems.length - 1].image}
-                  alt="Previous"
+                  alt={`Previous poem: ${poems[currentIndex > 0 ? currentIndex - 1 : poems.length - 1].title || 'Untitled'}`}
                   loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 w-full h-full object-cover"
                   style={{ transform: 'translate3d(0, 0, 0)' }}
                 />
@@ -344,8 +348,9 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
               {poems[currentIndex < poems.length - 1 ? currentIndex + 1 : 0].image ? (
                 <img
                   src={poems[currentIndex < poems.length - 1 ? currentIndex + 1 : 0].image}
-                  alt="Next"
+                  alt={`Next poem: ${poems[currentIndex < poems.length - 1 ? currentIndex + 1 : 0].title || 'Untitled'}`}
                   loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 w-full h-full object-cover"
                   style={{ transform: 'translate3d(0, 0, 0)' }}
                 />

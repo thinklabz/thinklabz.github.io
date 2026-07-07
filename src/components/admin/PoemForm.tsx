@@ -62,7 +62,8 @@ export default function PoemForm({ editingPoem, onSubmit, onCancel }: PoemFormPr
 
       // Upload new image if selected
       if (imageFile) {
-        finalImageUrl = await uploadImage(imageFile)
+        const uploadResult = await uploadImage(imageFile)
+        finalImageUrl = uploadResult.secureUrl
       }
 
       const poemData = {
@@ -213,7 +214,7 @@ export default function PoemForm({ editingPoem, onSubmit, onCancel }: PoemFormPr
           <div className="relative">
             <img
               src={imagePreview}
-              alt="Preview"
+              alt={`Preview of uploaded image for poem: ${title || 'Untitled'}`}
               loading="lazy"
               className="w-full h-48 object-cover rounded-lg"
             />

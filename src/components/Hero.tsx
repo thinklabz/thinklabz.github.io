@@ -43,8 +43,11 @@ export default function Hero({ poems }: HeroProps) {
         {quoteOfTheDay?.image ? (
           <img
             src={quoteOfTheDay.image}
-            alt="Quote background"
+            alt={`Background image for quote of the day: ${quoteOfTheDay.title || 'Untitled'}`}
             loading="eager"
+            fetchPriority="high"
+            width="1200"
+            height="800"
             draggable="false"
             onDragStart={(e) => e.preventDefault()}
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"

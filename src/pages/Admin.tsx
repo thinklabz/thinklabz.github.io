@@ -8,6 +8,7 @@ import PoemCard from '../components/admin/PoemCard'
 import Skeleton from '../components/admin/Skeleton'
 import Toast, { ToastType } from '../components/admin/Toast'
 import DeleteConfirmDialog from '../components/admin/DeleteConfirmDialog'
+import SEO from '../components/SEO'
 
 export default function Admin() {
   const navigate = useNavigate()
@@ -96,8 +97,14 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <>
+      <SEO
+        title="Admin Dashboard"
+        description="Admin dashboard for managing poetry collection"
+        noindex={true}
+      />
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -172,6 +179,7 @@ export default function Admin() {
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={handleDeleteConfirm}
       />
-    </div>
+      </div>
+    </>
   )
 }

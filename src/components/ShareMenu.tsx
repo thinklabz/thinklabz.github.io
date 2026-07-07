@@ -1,8 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Share2, Download, X } from 'lucide-react'
+import { Share2, X } from 'lucide-react'
 import { PoemWithId } from '../services/poems'
-import DownloadTemplateSelector from './DownloadTemplateSelector'
 
 interface ShareMenuProps {
   isOpen: boolean
@@ -11,9 +10,18 @@ interface ShareMenuProps {
 }
 
 export default function ShareMenu({ isOpen, onClose, poem }: ShareMenuProps) {
-  const [isDownloadSelectorOpen, setIsDownloadSelectorOpen] = useState(false)
-
   const websiteUrl = 'https://zerodot.in'
+
+  // Lock body scroll while the menu is open so the page behind it can't scroll.
+  useEffect(() => {
+    if (isOpen) {
+      const previousOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = previousOverflow
+      }
+    }
+  }, [isOpen])
 
   // Native share API
   const nativeShare = useCallback(async () => {
@@ -38,11 +46,6 @@ export default function ShareMenu({ isOpen, onClose, poem }: ShareMenuProps) {
       icon: <Share2 className="w-5 h-5" />,
       label: 'Share',
       action: nativeShare,
-    },
-    {
-      icon: <Download className="w-5 h-5" />,
-      label: 'Download Card',
-      action: () => setIsDownloadSelectorOpen(true),
     },
   ]
 
@@ -82,7 +85,7 @@ export default function ShareMenu({ isOpen, onClose, poem }: ShareMenuProps) {
                 sm:w-[420px]
                 sm:max-w-[90vw]
                 sm:px-0
-                max-h-[92dvh]
+                max-h-[90dvh]
                 flex
                 flex-col
               "
@@ -93,7 +96,7 @@ export default function ShareMenu({ isOpen, onClose, poem }: ShareMenuProps) {
                   rounded-t-3xl sm:rounded-2xl border border-white/12
                   shadow-[0_20px_60px_rgba(0,0,0,0.35)]
                   flex flex-col
-                  max-h-[92dvh]
+                  max-h-[90dvh]
                   overflow-hidden
                   p-4
                 "
@@ -113,7 +116,7 @@ export default function ShareMenu({ isOpen, onClose, poem }: ShareMenuProps) {
                 </div>
 
                 {/* Share Options */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto flex-1 min-h-0">
                   {shareOptions.map((option, index) => (
                     <motion.button
                       key={index}
@@ -135,13 +138,6 @@ export default function ShareMenu({ isOpen, onClose, poem }: ShareMenuProps) {
           </>
         )}
       </AnimatePresence>
-
-      {/* Download Template Selector */}
-      <DownloadTemplateSelector
-        isOpen={isDownloadSelectorOpen}
-        onClose={() => setIsDownloadSelectorOpen(false)}
-        poem={poem}
-      />
     </>
   )
 }

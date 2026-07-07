@@ -61,7 +61,7 @@ export default function RandomPoemCard({ poems }: RandomPoemCardProps) {
         {randomPoem.image ? (
           <img
             src={randomPoem.image}
-            alt="Random poem background"
+            alt={`Random poem background: ${randomPoem.title || 'Untitled'}`}
             loading="lazy"
             decoding="async"
             draggable="false"
@@ -98,9 +98,9 @@ export default function RandomPoemCard({ poems }: RandomPoemCardProps) {
               </div>
 
               {/* Poem Text */}
-              <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-relaxed select-none mb-4 text-center" style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', letterSpacing: '0.02em', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
+              <h3 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white leading-relaxed select-none mb-4 text-center" style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', letterSpacing: '0.02em', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
                 {randomPoem.text}
-              </h2>
+              </h3>
 
               {/* Author (if available) */}
               {randomPoem.title && (

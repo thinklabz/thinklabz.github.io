@@ -28,9 +28,9 @@ export default function HowToUse() {
           viewport={{ once: true, margin: "-50px" }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h2 className="text-2xl font-semibold text-foreground mb-8 select-none">
+          <h3 className="text-2xl font-semibold text-foreground mb-8 select-none">
             How to Use ZeroDot
-          </h2>
+          </h3>
 
           <div className="space-y-3">
             {steps.map((step, index) => {

@@ -12,10 +12,10 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 /**
  * Upload an image to Cloudinary using unsigned upload API
  * @param file - Image file to upload
- * @returns Secure URL of the uploaded image
+ * @returns Object containing secure URL and public ID
  * @throws Error with readable message if upload fails
  */
-export async function uploadImage(file: File): Promise<string> {
+export async function uploadImage(file: File): Promise<{ secureUrl: string; publicId: string }> {
   // Validate file type
   if (!ALLOWED_TYPES.includes(file.type)) {
     throw new Error('Invalid file type. Only JPG, JPEG, PNG, and WEBP are allowed.')
@@ -50,15 +50,55 @@ export async function uploadImage(file: File): Promise<string> {
       throw new Error(data.error?.message || 'Failed to upload image to Cloudinary.')
     }
 
-    if (!data.secure_url) {
-      throw new Error('Upload succeeded but no secure URL was returned.')
+    if (!data.secure_url || !data.public_id) {
+      throw new Error('Upload succeeded but no secure URL or public ID was returned.')
     }
 
-    return data.secure_url
+    return { secureUrl: data.secure_url, publicId: data.public_id }
   } catch (error) {
     if (error instanceof Error) {
       throw error
     }
     throw new Error('An unexpected error occurred during image upload.')
+  }
+}
+
+/**
+ * Delete an image from Cloudinary
+ * @param publicId - Cloudinary public ID of the image to delete
+ * @throws Error with readable message if deletion fails
+ */
+export async function deleteImage(publicId: string): Promise<void> {
+  if (!CLOUDINARY_CLOUD_NAME) {
+    throw new Error('Cloudinary configuration is missing.')
+  }
+
+  try {
+    const formData = new FormData()
+    formData.append('public_id', publicId)
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/destroy`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || 'Failed to delete image from Cloudinary.')
+    }
+
+    if (data.result !== 'ok') {
+      throw new Error('Deletion failed on Cloudinary side.')
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('An unexpected error occurred during image deletion.')
   }
 }

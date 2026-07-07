@@ -9,6 +9,7 @@ import AdminLoginModal from './components/AdminLoginModal'
 import SearchBar from './components/SearchBar'
 import RandomPoemCard from './components/RandomPoemCard'
 import AnimatedBackground from './components/AnimatedBackground'
+import SEO from './components/SEO'
 import { subscribeToPoems, PoemWithId } from './services/poems'
 
 const PoemReader = lazy(() => import('./components/PoemReader'))
@@ -25,6 +26,69 @@ function Home() {
   const [error, setError] = useState<string | null>(null)
   const [blurLevel, setBlurLevel] = useState(0)
   const navigate = useNavigate()
+
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'ZeroDot',
+    alternateName: 'ZeroDot Poetry',
+    url: 'https://zerodot.in',
+    description: 'Discover beautiful poetry at ZeroDot. A curated collection of poems to inspire and move you.',
+    inLanguage: 'en',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: 'https://zerodot.in/?search={search_term_string}',
+      'query-input': 'required name=search_term_string'
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'ZeroDot',
+      url: 'https://zerodot.in',
+      logo: 'https://zerodot.in/logo.png',
+      description: 'A poetry platform showcasing beautiful and inspiring poems'
+    }
+  }
+
+  // Dynamic structured data for current poem
+  const poemStructuredData = currentPoem ? {
+    '@context': 'https://schema.org',
+    '@type': 'CreativeWork',
+    name: currentPoem.title || 'Untitled Poem',
+    text: currentPoem.text,
+    author: {
+      '@type': 'Person',
+      name: 'AVX',
+      url: 'https://zerodot.in'
+    },
+    image: currentPoem.image,
+    datePublished: currentPoem.createdAt || new Date().toISOString(),
+    publisher: {
+      '@type': 'Organization',
+      name: 'ZeroDot',
+      url: 'https://zerodot.in'
+    },
+    inLanguage: 'en'
+  } : null
+
+  // Breadcrumb structured data for poem reader
+  const breadcrumbStructuredData = currentPoem ? {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://zerodot.in'
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: currentPoem.title || 'Poem',
+        item: `https://zerodot.in/poem/${currentPoem.id}`
+      }
+    ]
+  } : null
 
   // Restore scroll position and state from localStorage on mount
   useEffect(() => {
@@ -143,43 +207,51 @@ function Home() {
 
 
   return (
-    <AnimatedBackground blurLevel={blurLevel}>
-      <Navbar onSearchClick={() => {}} onMenuClick={() => setIsNavDrawerOpen(true)} onAdminTrigger={handleAdminTrigger} />
-      <Hero poems={poems} />
-      <SearchBar poems={poems} onPoemClick={handlePoemClick} onAdminTrigger={handleAdminTrigger} />
-      <RandomPoemCard poems={poems} />
-      <HowToUse />
-      <PoetryGrid
-        poems={poems}
-        isLoading={isLoading}
-        onCardClick={handlePoemClick}
+    <>
+      <SEO
+        title={currentPoem ? currentPoem.title : 'Home'}
+        description={currentPoem ? currentPoem.text.substring(0, 160) : 'Discover beautiful poetry at ZeroDot. A curated collection of poems to inspire and move you.'}
+        image={currentPoem?.image}
+        structuredData={currentPoem ? [poemStructuredData!, breadcrumbStructuredData!] : structuredData}
       />
-      <Suspense fallback={null}>
-        <PoemReader
+      <AnimatedBackground blurLevel={blurLevel}>
+        <Navbar onSearchClick={() => {}} onMenuClick={() => setIsNavDrawerOpen(true)} onAdminTrigger={handleAdminTrigger} />
+        <Hero poems={poems} />
+        <SearchBar poems={poems} onPoemClick={handlePoemClick} onAdminTrigger={handleAdminTrigger} />
+        <RandomPoemCard poems={poems} />
+        <HowToUse />
+        <PoetryGrid
           poems={poems}
-          currentPoem={currentPoem}
-          onClose={handleClose}
-          onNext={handleNext}
-          onPrevious={handlePrevious}
+          isLoading={isLoading}
+          onCardClick={handlePoemClick}
         />
-      </Suspense>
-      <Suspense fallback={null}>
-        <NavigationDrawer
-          isOpen={isNavDrawerOpen}
-          onClose={() => setIsNavDrawerOpen(false)}
+        <Suspense fallback={null}>
+          <PoemReader
+            poems={poems}
+            currentPoem={currentPoem}
+            onClose={handleClose}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+          />
+        </Suspense>
+        <Suspense fallback={null}>
+          <NavigationDrawer
+            isOpen={isNavDrawerOpen}
+            onClose={() => setIsNavDrawerOpen(false)}
+          />
+        </Suspense>
+        {error && (
+          <div className="fixed bottom-4 right-4 px-4 py-3 bg-red-500 text-white rounded-lg shadow-lg z-[300]">
+            {error}
+          </div>
+        )}
+        <AdminLoginModal
+          isOpen={isAdminLoginOpen}
+          onClose={() => setIsAdminLoginOpen(false)}
+          onLoginSuccess={handleAdminLoginSuccess}
         />
-      </Suspense>
-      {error && (
-        <div className="fixed bottom-4 right-4 px-4 py-3 bg-red-500 text-white rounded-lg shadow-lg z-[300]">
-          {error}
-        </div>
-      )}
-      <AdminLoginModal
-        isOpen={isAdminLoginOpen}
-        onClose={() => setIsAdminLoginOpen(false)}
-        onLoginSuccess={handleAdminLoginSuccess}
-      />
-    </AnimatedBackground>
+      </AnimatedBackground>
+    </>
   )
 }
 

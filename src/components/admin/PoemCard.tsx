@@ -27,6 +27,7 @@ export default function PoemCard({ poem, onEdit, onDelete }: PoemCardProps) {
             src={poem.image}
             alt={poem.title}
             loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover"
           />
         ) : (

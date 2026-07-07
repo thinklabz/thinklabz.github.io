@@ -66,9 +66,9 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }: Adm
             </button>
 
             {/* Header */}
-            <h2 className="text-2xl font-semibold text-foreground mb-6">
+            <h3 className="text-2xl font-semibold text-foreground mb-6">
               Admin Login
-            </h2>
+            </h3>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">

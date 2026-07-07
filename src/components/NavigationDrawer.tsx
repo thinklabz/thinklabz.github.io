@@ -165,7 +165,7 @@ const NavigationDrawer = memo(function NavigationDrawer({ isOpen, onClose }: Nav
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-bold text-foreground">Menu</h2>
+                <h3 className="text-xl font-bold text-foreground">Menu</h3>
                 <motion.button
                   onClick={() => {
                     triggerHaptic(10)

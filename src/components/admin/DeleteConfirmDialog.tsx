@@ -41,9 +41,9 @@ export default function DeleteConfirmDialog({
             </div>
 
             {/* Title */}
-            <h2 className="text-xl font-semibold text-foreground text-center mb-2">
+            <h3 className="text-xl font-semibold text-foreground text-center mb-2">
               {title}
-            </h2>
+            </h3>
 
             {/* Message */}
             <p className="text-muted-foreground text-center mb-6">

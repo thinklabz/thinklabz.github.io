@@ -74,9 +74,9 @@ const PoetryGrid = memo(function PoetryGrid({ poems, isLoading, onCardClick }: P
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="mb-8"
           >
-            <h2 className="text-2xl font-semibold text-foreground">
+            <h3 className="text-2xl font-semibold text-foreground">
               Poetry Collection
-            </h2>
+            </h3>
           </motion.div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -103,9 +103,9 @@ const PoetryGrid = memo(function PoetryGrid({ poems, isLoading, onCardClick }: P
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="mb-8"
           >
-            <h2 className="text-2xl font-semibold text-foreground">
+            <h3 className="text-2xl font-semibold text-foreground">
               Poetry Collection
-            </h2>
+            </h3>
           </motion.div>
 
           <div className="bg-secondary/30 border border-border/20 rounded-xl p-12 text-center">
@@ -176,6 +176,7 @@ const PoetryGrid = memo(function PoetryGrid({ poems, isLoading, onCardClick }: P
                   src={poem.image}
                   alt={poem.title}
                   loading="lazy"
+                  decoding="async"
                   draggable="false"
                   onDragStart={(e) => e.preventDefault()}
                   className="absolute inset-0 w-full h-full object-cover pointer-events-none"
