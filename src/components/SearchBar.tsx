@@ -6,10 +6,11 @@ import { PoemWithId } from '../services/poems'
 interface SearchBarProps {
   poems: PoemWithId[]
   onPoemClick: (poem: PoemWithId) => void
+  onAdminTrigger?: () => void
   placeholder?: string
 }
 
-export default function SearchBar({ poems, onPoemClick, placeholder = "Search poems, poets, emotions..." }: SearchBarProps) {
+export default function SearchBar({ poems, onPoemClick, onAdminTrigger, placeholder = "Search poems, poets, emotions..." }: SearchBarProps) {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [isExpanded, setIsExpanded] = useState(false)
@@ -23,6 +24,17 @@ export default function SearchBar({ poems, onPoemClick, placeholder = "Search po
     }, 250)
     return () => clearTimeout(timer)
   }, [query])
+
+  // AVXL keyword trigger for Admin Mode on touch devices
+  useEffect(() => {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+    
+    if (isTouchDevice && onAdminTrigger && query.toUpperCase() === 'AVXL') {
+      onAdminTrigger()
+      setQuery('')
+      setDebouncedQuery('')
+    }
+  }, [query, onAdminTrigger])
 
   const categories = Array.from(new Set(poems.map((p) => p.category).filter(Boolean)))
   const months = Array.from(new Set(poems.map((p) => p.month).filter(Boolean)))
@@ -83,16 +95,10 @@ export default function SearchBar({ poems, onPoemClick, placeholder = "Search po
         {/* Search Input */}
         <motion.div
           whileHover={{ 
-            background: 'linear-gradient(to right, #1A1A1A 0%, #F5F5F5 50%, #1A1A1A 100%)',
             boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)'
           }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          style={{
-            background: 'linear-gradient(to right, #1A1A1A 0%, #F8F8F8 50%, #1A1A1A 100%)',
-            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)',
-            inset: '0 1px 0 rgba(255, 255, 255, 0.8)'
-          }}
-          className="relative rounded-[24px] z-10 dark:bg-white dark:shadow-lg light:border-[1.5px] light:border-black light:bg-white light:shadow-none"
+          className="relative rounded-[24px] z-10 bg-white shadow-lg dark:bg-white dark:shadow-lg light:border-[1.5px] light:border-black light:bg-white light:shadow-none"
         >
           {/* Input */}
           <input

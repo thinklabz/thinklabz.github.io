@@ -146,7 +146,7 @@ function Home() {
     <AnimatedBackground blurLevel={blurLevel}>
       <Navbar onSearchClick={() => {}} onMenuClick={() => setIsNavDrawerOpen(true)} onAdminTrigger={handleAdminTrigger} />
       <Hero poems={poems} />
-      <SearchBar poems={poems} onPoemClick={handlePoemClick} />
+      <SearchBar poems={poems} onPoemClick={handlePoemClick} onAdminTrigger={handleAdminTrigger} />
       <RandomPoemCard poems={poems} />
       <HowToUse />
       <PoetryGrid

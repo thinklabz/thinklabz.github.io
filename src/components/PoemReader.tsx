@@ -356,7 +356,7 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
           )}
 
           {/* Dark overlay */}
-          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-black/50" />
 
           {/* Page indicator */}
           <AnimatePresence>
@@ -366,7 +366,7 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
-                className="absolute top-6 left-1/2 -translate-x-1/2 z-20 px-4 py-2 bg-black/30 backdrop-blur-sm rounded-full text-white text-sm font-medium"
+                className="absolute top-6 left-1/2 -translate-x-1/2 z-20 px-4 py-2 bg-black/50 backdrop-blur-sm rounded-full text-white text-sm font-medium"
               >
                 {currentIndex + 1} / {poems.length}
               </motion.div>
@@ -382,7 +382,7 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
             className="relative z-10 w-full h-full flex items-center justify-center px-4 sm:px-8 md:px-16"
           >
             <div 
-              className="max-w-4xl w-full px-4 transition-all duration-300"
+              className="max-w-4xl w-full px-4 py-12 flex flex-col items-center justify-center text-center transition-all duration-300"
             >
               {/* Poem text */}
               <motion.div
@@ -390,18 +390,21 @@ const PoemReader = memo(function PoemReader({ poems, currentPoem, onClose, onNex
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="text-center no-select"
+                className="w-full no-select"
                 onContextMenu={handleContextMenu}
                 onCopy={handleCopyCut}
                 onCut={handleCopyCut}
               >
                 <p 
-                  className={`leading-relaxed mb-6 sm:mb-8 select-none transition-all duration-300 ${isLetterMode ? 'text-2xl md:text-3xl lg:text-4xl font-normal italic' : 'text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-medium text-white'}`}
-                  style={isLetterMode ? {
-                    fontFamily: "'Cormorant Garamond', 'EB Garamond', 'Playfair Display', Georgia, serif",
-                    letterSpacing: '0.02em',
-                    lineHeight: '1.6',
-                  } : {}}
+                  className={`leading-relaxed mb-6 sm:mb-8 select-none transition-all duration-300 text-white ${isLetterMode ? 'text-2xl md:text-3xl lg:text-4xl font-normal italic' : 'text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-medium'}`}
+                  style={{
+                    textShadow: '0 2px 12px rgba(0,0,0,0.5)',
+                    ...(isLetterMode ? {
+                      fontFamily: "'Cormorant Garamond', 'EB Garamond', 'Playfair Display', Georgia, serif",
+                      letterSpacing: '0.02em',
+                      lineHeight: '1.6',
+                    } : {})
+                  }}
                 >
                   {currentPoem.text}
                 </p>

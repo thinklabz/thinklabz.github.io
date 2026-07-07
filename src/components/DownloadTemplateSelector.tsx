@@ -115,13 +115,31 @@ export default function DownloadTemplateSelector({ isOpen, onClose, poem }: Down
     ctx.fillRect(0, 0, width, height)
 
     // Poem text (wrapped) - vertically centered (no title or divider)
-    ctx.font = `${isDownload ? 32 : 16}px "Cormorant Garamond", "EB Garamond", "Playfair Display", Georgia, serif`
-    ctx.fillStyle = '#ffffff'
-    const maxWidth = width * 0.8
+    const maxWidth = width * 0.7
     const lineHeight = isDownload ? 45 : 22
     const lines = wrapText(ctx, poem.text, maxWidth)
     
-    let y = height * 0.4
+    // Dynamic font sizing based on poem length
+    let fontSize = isDownload ? 32 : 16
+    if (lines.length > 3) {
+      fontSize = isDownload ? 28 : 14
+    }
+    if (lines.length > 5) {
+      fontSize = isDownload ? 24 : 12
+    }
+    if (lines.length > 7) {
+      fontSize = isDownload ? 20 : 10
+    }
+    
+    ctx.font = `${fontSize}px "Cormorant Garamond", "EB Garamond", "Playfair Display", Georgia, serif`
+    ctx.fillStyle = '#ffffff'
+    ctx.textAlign = 'center'
+    
+    // Calculate vertical center position for entire text block
+    const totalTextHeight = lines.length * lineHeight
+    const startY = (height - totalTextHeight) / 2
+    
+    let y = startY
     lines.forEach((line) => {
       ctx.fillText(line, width / 2, y)
       y += lineHeight
@@ -215,23 +233,31 @@ export default function DownloadTemplateSelector({ isOpen, onClose, poem }: Down
     ctx.fillStyle = overlayGradient
     ctx.fillRect(0, height * 0.4, width, height * 0.6)
 
-    // BY AVX - editorial style
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
-    ctx.font = `italic ${isDownload ? 18 : 9}px "Cormorant Garamond", Georgia, serif`
-    ctx.textAlign = 'center'
-    ctx.fillText('BY AVX', width / 2, height * 0.55)
-
     // Title - editorial magazine style
     ctx.fillStyle = '#ffffff'
     ctx.font = `bold ${isDownload ? 42 : 21}px "Cormorant Garamond", "EB Garamond", "Playfair Display", Georgia, serif`
     ctx.fillText(poem.title || 'Poem', width / 2, height * 0.62)
 
     // Poem text (wrapped) - lower portion
-    ctx.font = `${isDownload ? 26 : 13}px "Cormorant Garamond", "EB Garamond", "Playfair Display", Georgia, serif`
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-    const maxWidth = width * 0.85
+    const maxWidth = width * 0.7
     const lineHeight = isDownload ? 38 : 19
     const lines = wrapText(ctx, poem.text, maxWidth)
+    
+    // Dynamic font sizing based on poem length
+    let fontSize = isDownload ? 26 : 13
+    if (lines.length > 3) {
+      fontSize = isDownload ? 22 : 11
+    }
+    if (lines.length > 5) {
+      fontSize = isDownload ? 18 : 9
+    }
+    if (lines.length > 7) {
+      fontSize = isDownload ? 16 : 8
+    }
+    
+    ctx.font = `${fontSize}px "Cormorant Garamond", "EB Garamond", "Playfair Display", Georgia, serif`
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+    ctx.textAlign = 'center'
     
     let y = height * 0.7
     lines.forEach((line) => {
@@ -344,19 +370,19 @@ export default function DownloadTemplateSelector({ isOpen, onClose, poem }: Down
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[303] w-[90%] max-w-md"
+              className="fixed bottom-0 sm:bottom-8 left-1/2 -translate-x-1/2 z-[303] w-[92vw] sm:w-[90%] max-w-[500px] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden box-border"
             >
-              <div className="bg-secondary/95 backdrop-blur-xl rounded-2xl border border-border/20 p-5 shadow-2xl">
+              <div className="bg-[rgba(15,15,15,0.45)] backdrop-blur-24 -webkit-backdrop-blur-24 rounded-t-3xl sm:rounded-2xl border border-white/12 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] pb-8 sm:pb-5">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-foreground">Choose Template</h3>
+                  <h3 className="text-lg font-semibold text-white">Choose Template</h3>
                   <motion.button
                     onClick={onClose}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    className="p-2 rounded-lg hover:bg-foreground/10 transition-colors"
+                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                   >
-                    <X className="w-4 h-4 text-foreground" />
+                    <X className="w-4 h-4 text-white" />
                   </motion.button>
                 </div>
 
@@ -369,14 +395,14 @@ export default function DownloadTemplateSelector({ isOpen, onClose, poem }: Down
                     className={`w-full p-3 rounded-xl border-2 transition-all ${
                       selectedTemplate === 'dark'
                         ? 'border-primary bg-primary/10'
-                        : 'border-border/20 hover:border-border/40 bg-background/50'
+                        : 'border-white/10 hover:border-white/20 bg-white/6 backdrop-blur-16'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-4 h-4 rounded-full border-2 ${
-                        selectedTemplate === 'dark' ? 'border-primary bg-primary' : 'border-border'
+                        selectedTemplate === 'dark' ? 'border-primary bg-primary' : 'border-white/30'
                       }`} />
-                      <span className="text-sm font-medium text-foreground">Type 1 — Dark Premium</span>
+                      <span className="text-sm font-medium text-white">Type 1 — Dark Premium</span>
                     </div>
                   </motion.button>
 
@@ -387,14 +413,14 @@ export default function DownloadTemplateSelector({ isOpen, onClose, poem }: Down
                     className={`w-full p-3 rounded-xl border-2 transition-all ${
                       selectedTemplate === 'polaroid'
                         ? 'border-primary bg-primary/10'
-                        : 'border-border/20 hover:border-border/40 bg-background/50'
+                        : 'border-white/10 hover:border-white/20 bg-white/6 backdrop-blur-16'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-4 h-4 rounded-full border-2 ${
-                        selectedTemplate === 'polaroid' ? 'border-primary bg-primary' : 'border-border'
+                        selectedTemplate === 'polaroid' ? 'border-primary bg-primary' : 'border-white/30'
                       }`} />
-                      <span className="text-sm font-medium text-foreground">Type 2 — Polaroid Style</span>
+                      <span className="text-sm font-medium text-white">Type 2 — Polaroid Style</span>
                     </div>
                   </motion.button>
                 </div>
@@ -402,8 +428,8 @@ export default function DownloadTemplateSelector({ isOpen, onClose, poem }: Down
                 {/* Preview */}
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Preview</span>
+                    <ImageIcon className="w-4 h-4 text-white/70" />
+                    <span className="text-xs text-white/70 uppercase tracking-wider">Preview</span>
                   </div>
                   <AnimatePresence mode="wait">
                     {previewUrl && (
@@ -413,7 +439,7 @@ export default function DownloadTemplateSelector({ isOpen, onClose, poem }: Down
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="relative w-full aspect-[4/5] rounded-lg overflow-hidden bg-background/50 border border-border/20"
+                        className="relative w-full aspect-[4/5] rounded-lg overflow-hidden bg-white/6 backdrop-blur-16 border border-white/10"
                       >
                         <img
                           src={previewUrl}
@@ -428,8 +454,8 @@ export default function DownloadTemplateSelector({ isOpen, onClose, poem }: Down
                 {/* Custom Caption Input */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Custom Caption</span>
-                    <span className="text-xs text-muted-foreground">{customCaption.length} / 120</span>
+                    <span className="text-xs text-white/70 uppercase tracking-wider">Custom Caption</span>
+                    <span className="text-xs text-white/70">{customCaption.length} / 120</span>
                   </div>
                   <input
                     type="text"
@@ -440,7 +466,7 @@ export default function DownloadTemplateSelector({ isOpen, onClose, poem }: Down
                       }
                     }}
                     placeholder="Write your own caption... (optional)"
-                    className="w-full px-4 py-3 bg-background/50 backdrop-blur-sm border border-border/30 rounded-xl text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 transition-all"
+                    className="w-full px-4 py-3 bg-white/6 backdrop-blur-16 border border-white/10 rounded-xl text-white placeholder:text-white/50 outline-none focus:border-white/20 transition-all"
                     maxLength={120}
                   />
                 </div>

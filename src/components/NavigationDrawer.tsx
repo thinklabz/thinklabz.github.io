@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from 'react'
+import { useState, useCallback, memo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronDown } from 'lucide-react'
 import { triggerHaptic } from '../utils/haptic'
@@ -9,6 +9,50 @@ interface Section {
   content: string
   links?: { label: string; url: string }[]
 }
+
+interface Update {
+  version: string
+  date: string
+  title: string
+  changes: string[]
+}
+
+const updates: Update[] = [
+  {
+    version: "1.2.0",
+    date: "2026-07-07",
+    title: "Premium Reader",
+    changes: [
+      "Added Random Poem",
+      "Improved Download Cards",
+      "Better Mobile UI",
+      "Glassmorphism Modals",
+      "Touch Device Admin Access"
+    ]
+  },
+  {
+    version: "1.1.0",
+    date: "2026-06-15",
+    title: "Download Cards",
+    changes: [
+      "New Download Card Generator",
+      "Custom Branding Support",
+      "Better Share Modal",
+      "UI Improvements"
+    ]
+  },
+  {
+    version: "1.0.0",
+    date: "2026-05-01",
+    title: "Initial Release",
+    changes: [
+      "Poetry Collection",
+      "Search Functionality",
+      "Theme Switching",
+      "Reader Mode"
+    ]
+  }
+]
 
 const sections: Section[] = [
   {
@@ -70,11 +114,29 @@ interface NavigationDrawerProps {
 
 const NavigationDrawer = memo(function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
   const [openSection, setOpenSection] = useState<string | null>(null)
+  const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false)
+
+  // Check for unread updates on mount
+  useEffect(() => {
+    const lastReadVersion = localStorage.getItem('zerodot_last_read_version')
+    const latestVersion = updates[0].version
+    
+    if (lastReadVersion !== latestVersion) {
+      setHasUnreadUpdates(true)
+    }
+  }, [])
 
   const toggleSection = useCallback((sectionId: string) => {
     triggerHaptic(10)
+    
+    // Mark updates as read when opening
+    if (sectionId === 'updates' && hasUnreadUpdates) {
+      localStorage.setItem('zerodot_last_read_version', updates[0].version)
+      setHasUnreadUpdates(false)
+    }
+    
     setOpenSection((prev) => (prev === sectionId ? null : sectionId))
-  }, [])
+  }, [hasUnreadUpdates])
 
   return (
     <AnimatePresence>
@@ -120,6 +182,65 @@ const NavigationDrawer = memo(function NavigationDrawer({ isOpen, onClose }: Nav
 
               {/* Accordion Sections */}
               <div className="space-y-2">
+                {/* Updates Section */}
+                <div className="border border-border/10 rounded-lg overflow-hidden">
+                  <motion.button
+                    onClick={() => toggleSection('updates')}
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-foreground/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground">🆕 Updates</span>
+                      {hasUnreadUpdates && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="w-2 h-2 rounded-full bg-[#FF3B30]"
+                          style={{
+                            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                          }}
+                        />
+                      )}
+                    </div>
+                    <motion.div
+                      animate={{ rotate: openSection === 'updates' ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    </motion.div>
+                  </motion.button>
+                  
+                  <AnimatePresence>
+                    {openSection === 'updates' && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4 pb-4 pt-2 space-y-4">
+                          {updates.map((update) => (
+                            <div key={update.version} className="border-b border-border/10 pb-4 last:border-0 last:pb-0">
+                              <div className="flex items-baseline gap-2 mb-1">
+                                <span className="font-bold text-foreground">{update.version}</span>
+                                <span className="text-xs text-muted-foreground">{update.date}</span>
+                              </div>
+                              <p className="text-sm text-foreground mb-2">{update.title}</p>
+                              <ul className="space-y-1">
+                                {update.changes.map((change, index) => (
+                                  <li key={index} className="text-sm text-muted-foreground">
+                                    • {change}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 {sections.map((section) => (
                   <div key={section.id} className="border border-border/10 rounded-lg overflow-hidden">
                     <motion.button
